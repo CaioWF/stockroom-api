@@ -1,0 +1,3 @@
+
+# keel: local trivial-change marker (never commit — see .claude/hooks/phase-gate.mjs)
+.specify/trivial

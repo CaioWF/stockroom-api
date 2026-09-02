@@ -1,0 +1,26 @@
+{
+  "_comment": "Layer map for the dependency-rule gate. Seeded once by the architecture-gates pack; this file is yours to edit and is never overwritten. Rename the layers to match your tree — the gate only knows what is declared here. Files under root/ that belong to no declared layer are unchecked, which is how the composition root (main/index) stays free to wire everything together.",
+  "_mayImport": "Directories this layer may import from. Anything not listed is a violation. Inner layers list fewer things; the innermost lists nothing.",
+  "_mayImportExternal": "External packages this layer may import. \"*\" allows any, [] allows none, a list allows exactly those. An allow-list on purpose, so a package added later is blocked by default rather than passing unnoticed. node: builtins are always allowed.",
+  "root": "src",
+  "extensions": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"],
+  "layers": {
+    "domain": {
+      "mayImport": [],
+      "mayImportExternal": []
+    },
+    "application": {
+      "mayImport": ["domain"],
+      "mayImportExternal": []
+    },
+    "infrastructure": {
+      "mayImport": ["application", "domain"],
+      "mayImportExternal": "*"
+    },
+    "interface": {
+      "mayImport": ["application", "domain"],
+      "mayImportExternal": "*"
+    }
+  },
+  "ignore": ["**/*.test.*", "**/*.spec.*", "**/__tests__/**", "**/__mocks__/**"]
+}

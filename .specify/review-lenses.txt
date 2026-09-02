@@ -1,0 +1,12 @@
+# Review lenses dispatched by `review-and-simplify`, one skill name per line.
+# Core ships the stack-agnostic lenses; packs append stack-specific ones
+# (e.g. the ui-review pack appends perf-review + a11y-review). Blank lines and
+# lines starting with `#` are ignored. Order is dispatch order (all fan out in
+# parallel regardless).
+code-review
+security-review
+api-contract
+migration-safety
+saas-security
+perf-review
+a11y-review

@@ -1,0 +1,17 @@
+{
+  "keel_version": "0.2.0",
+  "commit": "0c1d671",
+  "installed_at": "2026-09-02T17:58:02.182Z",
+  "updated_at": "2026-09-02T17:58:10.967Z",
+  "agents": [
+    "claude"
+  ],
+  "packs": [
+    "api-review",
+    "architecture-gates",
+    "saas-security",
+    "ship",
+    "stack-conventions",
+    "ui-review"
+  ]
+}

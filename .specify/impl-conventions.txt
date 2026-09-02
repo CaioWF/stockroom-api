@@ -1,0 +1,10 @@
+# Implementation-convention lenses consulted BEFORE writing code, one skill name
+# per line. Core ships empty (stack-agnostic); packs append stack-specific
+# convention skills (e.g. the stack-conventions pack appends naming-conventions,
+# postgres-conventions, typescript-conventions). `plan-writer` reads them to
+# ground `Technical Decisions`; `implement-feature` applies them while coding.
+# Blank lines and lines starting with `#` are ignored.
+naming-conventions
+postgres-conventions
+typescript-conventions
+observability-and-instrumentation
