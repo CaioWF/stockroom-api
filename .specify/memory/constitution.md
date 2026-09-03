@@ -45,9 +45,11 @@
   if (!ALLOWED_ROLES.has(caller.role)) throw new ForbiddenException();
   ```
 
-- **The AWS SDK does not leave `infra/`.** Domain and application code depend on a port
-  (`ProductRepository`, `RateLimitStore`, `Clock`); only an adapter imports `@aws-sdk/*`. A grep
-  for `@aws-sdk` outside `infra/` is a review failure.
+- **The AWS SDK does not leave an `infrastructure/` directory.** Domain and application code
+  depend on a port (`ProductRepository`, `RateLimitStore`, `Clock`); only an adapter imports
+  `@aws-sdk/*`. A grep for `@aws-sdk` outside `**/infrastructure/` is a review failure. Modules
+  are grouped by bounded context first and technical layer second — `src/auth/domain/`, never
+  `src/domain/auth/` — so opening `src/` names the domain rather than the framework.
 
 - **Naming crosses the persistence boundary once.** `camelCase` in code, the single-table
   attribute names (`PK`, `SK`, `GSI1PK`, and `snake_case` payload attributes) only inside the
@@ -86,8 +88,9 @@
 - **The transport is an adapter.** The load-balancer event shape reaching the function is an infra
   detail, confined to the handler that translates it into the framework's request. Swapping the
   entry point must not touch a use case or a domain entity.
-- **One module owns the table.** Single-table design is a persistence decision; key construction
-  and item mapping live in one place. No other module builds a key.
+- **One module owns the table.** Single-table design is a persistence decision: the shared client,
+  the key grammar, and item mapping live in `src/shared/persistence/`, a declared shared kernel.
+  A bounded context's repository composes that grammar; no module invents a key of its own.
 - **Time and randomness are injected.** Token expiry and rate-limit windows depend on a `Clock`
   port, so their behavior is testable without waiting.
 
