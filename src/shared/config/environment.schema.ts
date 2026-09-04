@@ -118,6 +118,9 @@ export function parseAppConfig(
 ): AppConfig {
   const result = rawEnvironmentSchema.safeParse(env);
   if (!result.success) {
+    // SPEC_DEVIATION: raw throw new Error, banned by the constitution — bootstrap-time
+    // config validation never reaches the HTTP error taxonomy, so it's out of that
+    // filter's scope (see problem-details.filter.ts).
     throw new Error(formatEnvironmentError(result.error));
   }
   return toAppConfig(result.data);

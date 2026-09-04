@@ -121,9 +121,9 @@ date: 2026-09-03
 - **FR24** — Every error response is an RFC 9457 problem document (`type`, `title`, `status`,
   `detail`, `instance`) carrying an additional `code` drawn from a closed, enumerated set —
   `EMAIL_ALREADY_REGISTERED`, `PASSWORD_LENGTH_INVALID`, `EMAIL_INVALID`, `INVALID_CREDENTIALS`,
-  `INVALID_REFRESH_TOKEN`, `SERVICE_UNAVAILABLE`. Because the contract is generated from the same
-  schemas that validate requests, that set is published as a discriminated union and a client can
-  handle it exhaustively.
+  `INVALID_REFRESH_TOKEN`, `INVALID_ACCESS_TOKEN`, `SERVICE_UNAVAILABLE`. Because the contract is
+  generated from the same schemas that validate requests, that set is published as a discriminated
+  union and a client can handle it exhaustively.
 - **FR25** — `GET /health` reports liveness without reading storage or acquiring a signing key.
 - **FR26** — The OpenAPI document is generated from the same schemas that validate requests and is
   served at a public route.
@@ -205,9 +205,11 @@ date: 2026-09-03
 - **AC-26** — Given the running application, when the OpenAPI document is fetched without a
   credential, then it is served, describes every route in this specification, and enumerates the
   error codes as a closed set.
-- **AC-27** — Given any rejected request, when its response body is inspected, then it is an RFC
-  9457 problem document whose `code` is a member of the enumerated set and whose `status` matches
-  the HTTP status line.
+- **AC-27** — Given any rejected request handled by an application route, when its response body
+  is inspected, then it is an RFC 9457 problem document whose `code` is a member of the enumerated
+  set and whose `status` matches the HTTP status line. A request to an unmatched route (no
+  application route exists) is out of this contract's scope — it returns Nest's own 404 shape,
+  not a problem document.
 
 ## Out of Scope
 
