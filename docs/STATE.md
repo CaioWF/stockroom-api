@@ -76,10 +76,11 @@ description: Between-session work-state tracking the current active feature, rec
 - **`simplify` ran: zero changes needed** — every file already within the CLAUDE.md/constitution
   style bar after 3 review rounds this session. Baseline re-confirmed green (unit 151/151,
   integration 4/4, e2e 33/33, gates green). Tree unchanged, `c3115ce8619f804310cc8ae1d69d14d2c16a9807`.
-- **REVIEW-AND-SIMPLIFY COMPLETE. Milestone ready for commit.**
-- **Next concrete step:** propose the milestone commit message(s) to the human and wait for
-  explicit approval (Tasks 1-5 already committed as `c4728a3`/`5d69f6f`; this covers Tasks 6-18 +
-  all review-and-simplify work).
+- **MILESTONE COMMITTED: `a7e6b60`** ("feat(auth): implement authentication endpoints, guards,
+  and refresh rotation") — covers Tasks 6-18 + all review-and-simplify work. Working tree clean.
+  Full `001-authentication` feature now spans `c4728a3`, `5d69f6f`, `a7e6b60`.
+- **Next concrete step:** `finishing-a-development-branch` — presents integrate options (merge,
+  PR, keep, discard) and handles worktree cleanup. Not yet run this session.
 
 ## Recent decisions
 
