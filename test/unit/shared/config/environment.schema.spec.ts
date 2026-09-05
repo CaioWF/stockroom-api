@@ -31,6 +31,19 @@ describe('parseAppConfig', () => {
       sessionCeilingSeconds: 172800,
       signingKeyParameterName: '/stockroom/signing-key',
       verificationKeysParameterName: '/stockroom/verification-keys',
+      throttleCredentialsLimit: 10,
+      throttleCredentialsWindowSeconds: 60,
+      throttleRefreshLimit: 60,
+      throttleRefreshWindowSeconds: 60,
+      throttleJwksLimit: 120,
+      throttleJwksWindowSeconds: 60,
+      throttleAuthenticatedLimit: 100,
+      throttleAuthenticatedWindowSeconds: 60,
+      throttleCounterSaturationFactor: 2,
+      throttleLocalFallbackFactor: 1,
+      throttleLocalCacheMaxEntries: 10000,
+      throttleStoreDeadlineMilliseconds: 500,
+      throttleStoreMaxAttempts: 3,
     });
   });
 
@@ -134,4 +147,56 @@ describe('parseAppConfig', () => {
       expect(() => parseAppConfig(env)).toThrow(variableName);
     },
   );
+
+  it('applies throttle config defaults when all throttle variables are omitted', () => {
+    const env = validEnv();
+    const config = parseAppConfig(env);
+
+    expect(config.throttleCredentialsLimit).toBe(10);
+    expect(config.throttleCredentialsWindowSeconds).toBe(60);
+    expect(config.throttleRefreshLimit).toBe(60);
+    expect(config.throttleRefreshWindowSeconds).toBe(60);
+    expect(config.throttleJwksLimit).toBe(120);
+    expect(config.throttleJwksWindowSeconds).toBe(60);
+    expect(config.throttleAuthenticatedLimit).toBe(100);
+    expect(config.throttleAuthenticatedWindowSeconds).toBe(60);
+    expect(config.throttleCounterSaturationFactor).toBe(2);
+    expect(config.throttleLocalFallbackFactor).toBe(1);
+    expect(config.throttleLocalCacheMaxEntries).toBe(10000);
+    expect(config.throttleStoreDeadlineMilliseconds).toBe(500);
+    expect(config.throttleStoreMaxAttempts).toBe(3);
+  });
+
+  it('overrides throttle config defaults when variables are explicitly set', () => {
+    const env = validEnv();
+    env.THROTTLE_CREDENTIALS_LIMIT = '20';
+    env.THROTTLE_CREDENTIALS_WINDOW_SECONDS = '120';
+    env.THROTTLE_REFRESH_LIMIT = '80';
+    env.THROTTLE_REFRESH_WINDOW_SECONDS = '120';
+    env.THROTTLE_JWKS_LIMIT = '200';
+    env.THROTTLE_JWKS_WINDOW_SECONDS = '120';
+    env.THROTTLE_AUTHENTICATED_LIMIT = '150';
+    env.THROTTLE_AUTHENTICATED_WINDOW_SECONDS = '120';
+    env.THROTTLE_COUNTER_SATURATION_FACTOR = '3';
+    env.THROTTLE_LOCAL_FALLBACK_FACTOR = '2';
+    env.THROTTLE_LOCAL_CACHE_MAX_ENTRIES = '20000';
+    env.THROTTLE_STORE_DEADLINE_MILLISECONDS = '1000';
+    env.THROTTLE_STORE_MAX_ATTEMPTS = '5';
+
+    const config = parseAppConfig(env);
+
+    expect(config.throttleCredentialsLimit).toBe(20);
+    expect(config.throttleCredentialsWindowSeconds).toBe(120);
+    expect(config.throttleRefreshLimit).toBe(80);
+    expect(config.throttleRefreshWindowSeconds).toBe(120);
+    expect(config.throttleJwksLimit).toBe(200);
+    expect(config.throttleJwksWindowSeconds).toBe(120);
+    expect(config.throttleAuthenticatedLimit).toBe(150);
+    expect(config.throttleAuthenticatedWindowSeconds).toBe(120);
+    expect(config.throttleCounterSaturationFactor).toBe(3);
+    expect(config.throttleLocalFallbackFactor).toBe(2);
+    expect(config.throttleLocalCacheMaxEntries).toBe(20000);
+    expect(config.throttleStoreDeadlineMilliseconds).toBe(1000);
+    expect(config.throttleStoreMaxAttempts).toBe(5);
+  });
 });

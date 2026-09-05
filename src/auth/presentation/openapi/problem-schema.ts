@@ -9,7 +9,7 @@ import './extend-zod';
 
 import { z } from 'zod';
 
-import { PROBLEM_CODES } from '../problem-details.filter';
+import { PROBLEM_CODES } from '../../../shared/presentation/problem-details.filter';
 
 export const ProblemDetailsSchema = z
   .object({

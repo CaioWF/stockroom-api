@@ -37,6 +37,7 @@ import type { AuthClaims, AuthenticatedRequest } from './jwt-auth.guard';
 import { MissingAuthClaimsError } from './missing-auth-claims.error';
 import { Public } from './public.decorator';
 import { RefreshRejectedError } from './refresh-rejected.error';
+import { ThrottleGroup } from '../../throttling/presentation/throttle-group.decorator';
 
 interface RegisterResponseBody {
   readonly accountId: string;
@@ -54,6 +55,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @ThrottleGroup('credentials')
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() body: unknown): Promise<RegisterResponseBody> {
@@ -63,6 +65,7 @@ export class AuthController {
   }
 
   @Public()
+  @ThrottleGroup('credentials')
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: unknown): Promise<AuthenticateAccountResult> {
@@ -71,6 +74,7 @@ export class AuthController {
   }
 
   @Public()
+  @ThrottleGroup('refresh')
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() body: unknown): Promise<AuthenticateAccountResult> {

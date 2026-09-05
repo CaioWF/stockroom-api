@@ -8,7 +8,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { PROBLEM_CODES } from '../../../src/auth/presentation/problem-details.filter';
+import { PROBLEM_CODES } from '../../../src/shared/presentation/problem-details.filter';
 import { buildTestApp } from '../auth/support/build-test-app';
 import { httpServerOf } from '../auth/support/http-test-client';
 
@@ -27,6 +27,10 @@ interface OpenApiDocumentBody {
   };
 }
 
+interface OpenApiOperation {
+  readonly responses?: Record<string, unknown>;
+}
+
 const EXPECTED_ROUTES: ReadonlyArray<{
   readonly path: string;
   readonly method: string;
@@ -36,6 +40,17 @@ const EXPECTED_ROUTES: ReadonlyArray<{
   { path: '/auth/refresh', method: 'post' },
   { path: '/auth/me', method: 'get' },
   { path: '/health', method: 'get' },
+  { path: '/.well-known/jwks.json', method: 'get' },
+];
+
+const EXPECTED_THROTTLED_ROUTES: ReadonlyArray<{
+  readonly path: string;
+  readonly method: string;
+}> = [
+  { path: '/auth/register', method: 'post' },
+  { path: '/auth/login', method: 'post' },
+  { path: '/auth/refresh', method: 'post' },
+  { path: '/auth/me', method: 'get' },
   { path: '/.well-known/jwks.json', method: 'get' },
 ];
 
@@ -73,5 +88,16 @@ describe('GET /openapi.json (e2e)', () => {
       [];
 
     expect([...codeEnum].sort()).toEqual([...PROBLEM_CODES].sort());
+  });
+
+  it('documents 429 responses for every throttled route (AC-23)', async () => {
+    const response = await request(httpServerOf(app)).get('/openapi.json');
+    const document = response.body as OpenApiDocumentBody;
+
+    for (const { path, method } of EXPECTED_THROTTLED_ROUTES) {
+      const operation = document.paths[path]?.[method] as
+        OpenApiOperation | undefined;
+      expect(operation?.responses?.['429']).toBeDefined();
+    }
   });
 });

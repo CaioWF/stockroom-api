@@ -36,6 +36,7 @@ import type {
   VerificationKeySetProvider,
 } from '../domain/ports/verification-key-set-provider';
 import { Public } from './public.decorator';
+import { ThrottleGroup } from '../../throttling/presentation/throttle-group.decorator';
 
 const RS256_ALGORITHM = 'RS256';
 const CACHE_LIFETIME_SECONDS = 3600;
@@ -52,6 +53,7 @@ export class JwksController {
   ) {}
 
   @Public()
+  @ThrottleGroup('jwks')
   @Get('jwks.json')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', `public, max-age=${CACHE_LIFETIME_SECONDS}`)

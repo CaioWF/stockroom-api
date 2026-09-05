@@ -10,6 +10,23 @@ const DEFAULT_ACCESS_TOKEN_TTL_SECONDS = 900;
 const DEFAULT_REFRESH_TOKEN_TTL_SECONDS = 604800;
 const DEFAULT_SESSION_CEILING_SECONDS = 2592000;
 
+// Throttle configuration defaults for rate-limiting per route group
+const DEFAULT_THROTTLE_CREDENTIALS_LIMIT = 10;
+const DEFAULT_THROTTLE_CREDENTIALS_WINDOW_SECONDS = 60;
+const DEFAULT_THROTTLE_REFRESH_LIMIT = 60;
+const DEFAULT_THROTTLE_REFRESH_WINDOW_SECONDS = 60;
+const DEFAULT_THROTTLE_JWKS_LIMIT = 120;
+const DEFAULT_THROTTLE_JWKS_WINDOW_SECONDS = 60;
+const DEFAULT_THROTTLE_AUTHENTICATED_LIMIT = 100;
+const DEFAULT_THROTTLE_AUTHENTICATED_WINDOW_SECONDS = 60;
+const DEFAULT_THROTTLE_COUNTER_SATURATION_FACTOR = 2;
+const DEFAULT_THROTTLE_LOCAL_FALLBACK_FACTOR = 1;
+// Conservative default for fallback limiter memory; scales to ~2.5 million requests per hour
+const DEFAULT_THROTTLE_LOCAL_CACHE_MAX_ENTRIES = 10000;
+// Total budget for all DynamoDB calls per request; comfortably under API Gateway timeout
+const DEFAULT_THROTTLE_STORE_DEADLINE_MILLISECONDS = 500;
+const DEFAULT_THROTTLE_STORE_MAX_ATTEMPTS = 3;
+
 const requiredString = z
   .string({ required_error: 'is required' })
   .trim()
@@ -61,6 +78,43 @@ const rawEnvironmentSchema = z.object({
   ),
   SIGNING_KEY_PARAMETER_NAME: requiredString,
   VERIFICATION_KEYS_PARAMETER_NAME: requiredString,
+  THROTTLE_CREDENTIALS_LIMIT: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_CREDENTIALS_LIMIT,
+  ),
+  THROTTLE_CREDENTIALS_WINDOW_SECONDS: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_CREDENTIALS_WINDOW_SECONDS,
+  ),
+  THROTTLE_REFRESH_LIMIT: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_REFRESH_LIMIT,
+  ),
+  THROTTLE_REFRESH_WINDOW_SECONDS: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_REFRESH_WINDOW_SECONDS,
+  ),
+  THROTTLE_JWKS_LIMIT: positiveIntegerWithDefault(DEFAULT_THROTTLE_JWKS_LIMIT),
+  THROTTLE_JWKS_WINDOW_SECONDS: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_JWKS_WINDOW_SECONDS,
+  ),
+  THROTTLE_AUTHENTICATED_LIMIT: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_AUTHENTICATED_LIMIT,
+  ),
+  THROTTLE_AUTHENTICATED_WINDOW_SECONDS: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_AUTHENTICATED_WINDOW_SECONDS,
+  ),
+  THROTTLE_COUNTER_SATURATION_FACTOR: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_COUNTER_SATURATION_FACTOR,
+  ),
+  THROTTLE_LOCAL_FALLBACK_FACTOR: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_LOCAL_FALLBACK_FACTOR,
+  ),
+  THROTTLE_LOCAL_CACHE_MAX_ENTRIES: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_LOCAL_CACHE_MAX_ENTRIES,
+  ),
+  THROTTLE_STORE_DEADLINE_MILLISECONDS: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_STORE_DEADLINE_MILLISECONDS,
+  ),
+  THROTTLE_STORE_MAX_ATTEMPTS: positiveIntegerWithDefault(
+    DEFAULT_THROTTLE_STORE_MAX_ATTEMPTS,
+  ),
 });
 
 type RawEnvironment = z.infer<typeof rawEnvironmentSchema>;
@@ -81,9 +135,49 @@ export interface AppConfig {
   sessionCeilingSeconds: number;
   signingKeyParameterName: string;
   verificationKeysParameterName: string;
+  throttleCredentialsLimit: number;
+  throttleCredentialsWindowSeconds: number;
+  throttleRefreshLimit: number;
+  throttleRefreshWindowSeconds: number;
+  throttleJwksLimit: number;
+  throttleJwksWindowSeconds: number;
+  throttleAuthenticatedLimit: number;
+  throttleAuthenticatedWindowSeconds: number;
+  throttleCounterSaturationFactor: number;
+  throttleLocalFallbackFactor: number;
+  throttleLocalCacheMaxEntries: number;
+  throttleStoreDeadlineMilliseconds: number;
+  throttleStoreMaxAttempts: number;
 }
 
-function toAppConfig(raw: RawEnvironment): AppConfig {
+// The subset of `AppConfig` keys `toThrottleConfig` populates. Listed once
+// more here rather than derived, since TypeScript has no first-class
+// "fields added after this comment" operator — but the two functions below
+// use it on both sides (`Omit<AppConfig, ThrottleConfigKey>` and
+// `Record<ThrottleConfigKey, number>`), so adding a throttle field to
+// `AppConfig` without adding it here fails `toAppConfig`'s merge to compile
+// (an excess or missing property), rather than silently compiling.
+type ThrottleConfigKey =
+  | 'throttleCredentialsLimit'
+  | 'throttleCredentialsWindowSeconds'
+  | 'throttleRefreshLimit'
+  | 'throttleRefreshWindowSeconds'
+  | 'throttleJwksLimit'
+  | 'throttleJwksWindowSeconds'
+  | 'throttleAuthenticatedLimit'
+  | 'throttleAuthenticatedWindowSeconds'
+  | 'throttleCounterSaturationFactor'
+  | 'throttleLocalFallbackFactor'
+  | 'throttleLocalCacheMaxEntries'
+  | 'throttleStoreDeadlineMilliseconds'
+  | 'throttleStoreMaxAttempts';
+
+// Split from a single 27-line mapping (task-3 review: past the 4-20 line
+// convention) into one function per variable group. Each half stays a
+// plain one-to-one field mapping; `toAppConfig` itself is back to a merge.
+function toAuthAndPersistenceConfig(
+  raw: RawEnvironment,
+): Omit<AppConfig, ThrottleConfigKey> {
   return {
     tableName: raw.TABLE_NAME,
     awsRegion: raw.AWS_REGION,
@@ -96,6 +190,31 @@ function toAppConfig(raw: RawEnvironment): AppConfig {
     signingKeyParameterName: raw.SIGNING_KEY_PARAMETER_NAME,
     verificationKeysParameterName: raw.VERIFICATION_KEYS_PARAMETER_NAME,
   };
+}
+
+function toThrottleConfig(
+  raw: RawEnvironment,
+): Record<ThrottleConfigKey, number> {
+  return {
+    throttleCredentialsLimit: raw.THROTTLE_CREDENTIALS_LIMIT,
+    throttleCredentialsWindowSeconds: raw.THROTTLE_CREDENTIALS_WINDOW_SECONDS,
+    throttleRefreshLimit: raw.THROTTLE_REFRESH_LIMIT,
+    throttleRefreshWindowSeconds: raw.THROTTLE_REFRESH_WINDOW_SECONDS,
+    throttleJwksLimit: raw.THROTTLE_JWKS_LIMIT,
+    throttleJwksWindowSeconds: raw.THROTTLE_JWKS_WINDOW_SECONDS,
+    throttleAuthenticatedLimit: raw.THROTTLE_AUTHENTICATED_LIMIT,
+    throttleAuthenticatedWindowSeconds:
+      raw.THROTTLE_AUTHENTICATED_WINDOW_SECONDS,
+    throttleCounterSaturationFactor: raw.THROTTLE_COUNTER_SATURATION_FACTOR,
+    throttleLocalFallbackFactor: raw.THROTTLE_LOCAL_FALLBACK_FACTOR,
+    throttleLocalCacheMaxEntries: raw.THROTTLE_LOCAL_CACHE_MAX_ENTRIES,
+    throttleStoreDeadlineMilliseconds: raw.THROTTLE_STORE_DEADLINE_MILLISECONDS,
+    throttleStoreMaxAttempts: raw.THROTTLE_STORE_MAX_ATTEMPTS,
+  };
+}
+
+function toAppConfig(raw: RawEnvironment): AppConfig {
+  return { ...toAuthAndPersistenceConfig(raw), ...toThrottleConfig(raw) };
 }
 
 // zod's issue.path is the object key, which for this schema is already the

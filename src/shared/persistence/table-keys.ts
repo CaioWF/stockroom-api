@@ -35,3 +35,16 @@ export function buildRefreshTokenKey(
 ): TableKey {
   return { PK: `USER#${accountId}`, SK: `REFRESH#${tokenId}` };
 }
+
+/**
+ * Throttle-counter item key, using a disjoint THROTTLE# partition to isolate
+ * rate-limit state from account profile and token data, preventing traffic
+ * floods from degrading a user's own DynamoDB per-partition write budget.
+ */
+export function buildThrottleCounterKey(
+  scope: string,
+  identity: string,
+  routeGroup: string,
+): TableKey {
+  return { PK: `THROTTLE#${scope}#${identity}`, SK: routeGroup };
+}
