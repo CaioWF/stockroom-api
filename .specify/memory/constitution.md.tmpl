@@ -1,0 +1,38 @@
+# Project Constitution
+
+## Principles
+
+- [Principle 1: Brief description]
+- [Principle 2: Brief description]
+- [Principle 3: Brief description]
+
+## Code Standards
+
+- [Standard 1: Convention and example]
+- [Standard 2: Convention and example]
+- [Standard 3: Convention and example]
+
+## Architecture Principles
+
+> Non-negotiables distilled from the concept layer (`architecture` skill). Depth and rationale
+> live in the guides; here only the rules the agent must always follow.
+
+- **Dependency rule:** dependencies point inward. The domain (entities, business rules) does
+  NOT import framework, I/O, database, HTTP, or infra details. Infra depends on the domain, never the reverse.
+- **Pure domain:** business logic stays testable without spinning up a framework/network/database.
+  Side effects stay at the edges (adapters/infra).
+- **Aggregate boundary (DDD):** mutations go through the aggregate root; invariants are guaranteed
+  there. Do not alter internal entities from outside the root.
+- **Test behavior, not implementation:** tests verify inputs/outputs/observable effects, never
+  mocks or internal details (see the `test-driven-development` skill).
+- **Minimum viable:** climb the laziness ladder (does it need to exist? → reuse → stdlib → native
+  → installed dep → one-liner → minimum) before adding a dep, abstraction, or feature. Never at
+  the expense of trust-boundary validation, data loss, security, or a11y (see the `minimalism.md`
+  guide).
+
+## SDD Process
+
+- [Phase 1: Investigation and Spec]
+- [Phase 2: Implementation]
+- [Phase 3: Review and Validation]
+- [Phase 4: Merge and Deploy]

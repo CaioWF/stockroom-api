@@ -1,0 +1,7 @@
+{
+  "version": "",
+  "agents": [
+    "claude",
+    "codex"
+  ]
+}
