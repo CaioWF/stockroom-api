@@ -5,13 +5,25 @@
 <!-- BEGIN:keel:environment -->
 How this project is brought up and taken down. Fill each line the first time you learn it; `learn-session` keeps it current. Record the exact command, not a description of it, and state the prohibition whenever a wrong path exists ("do not start the dev server directly — use the script above").
 
-- start: [command]
-- stop: [command]
-- required env vars: [names, and where they are set]
-- local URL / health check: [address]
-- test data / credentials: [seeded login, fixtures]
+- start: `docker compose up -d dynamodb && npm run db:create-table && npm run keys:generate && npm run start:dev`
+- stop: `docker compose down -v`
+- required env vars: copy `.env.example` to `.env` — never auto-loaded (no `dotenv` dependency), source it manually before any config-touching command
+- local URL / health check: `http://localhost:3000/health` (port from `PORT` env var, default 3000)
+- test data / credentials: none seeded — e2e suites register the accounts they need through the public routes
 - watch work in flight: `bash scripts/keel-watch.sh` — status pane (features, tasks dispatched, ledger, worktrees) plus a shell per extra worktree; `--no-tmux` renders the same status in one terminal
 <!-- END:keel:environment -->
+
+## Tests
+
+<!-- BEGIN:keel:tests -->
+- unit: `npm run test:unit` (no DynamoDB needed)
+- integration: `npm run test:integration` (needs local DynamoDB up)
+- e2e: `npm run test:e2e` (needs local DynamoDB up; `/auth/login` and `/.well-known/jwks.json`
+  additionally need real AWS SSM credentials — no local Parameter Store emulator exists)
+- one file: `npm run test:e2e -- <path-substring>` — the positional arg matches by file-path
+  substring, not test name; do not use a short substring like `me`, checkouts commonly live under
+  `/home/...` and would match every e2e file
+<!-- END:keel:tests -->
 
 ## SDD Workflow
 
