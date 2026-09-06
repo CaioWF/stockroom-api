@@ -2,6 +2,7 @@ import {
   buildAccountKey,
   buildEmailLockKey,
   buildRefreshTokenKey,
+  buildThrottleCounterKey,
 } from '../../../../src/shared/persistence/table-keys';
 
 describe('table-keys', () => {
@@ -51,6 +52,37 @@ describe('table-keys', () => {
       const mineKey = buildRefreshTokenKey(accountId, tokenId);
       const foreignKey = buildRefreshTokenKey(otherAccountId, tokenId);
       expect(mineKey.PK).not.toEqual(foreignKey.PK);
+    });
+  });
+
+  describe('buildThrottleCounterKey', () => {
+    it('produces THROTTLE#/ip/identity and routeGroup pair', () => {
+      expect(buildThrottleCounterKey('ip', '192.0.2.1', 'credentials')).toEqual(
+        {
+          PK: 'THROTTLE#ip#192.0.2.1',
+          SK: 'credentials',
+        },
+      );
+    });
+
+    it('produces THROTTLE#/account/identity and routeGroup pair', () => {
+      const accountId = '018f2f3c-0000-7000-8000-000000000001';
+      expect(buildThrottleCounterKey('account', accountId, 'refresh')).toEqual({
+        PK: `THROTTLE#account#${accountId}`,
+        SK: 'refresh',
+      });
+    });
+
+    it('never uses USER# prefix for any scope or identity combination', () => {
+      const accountId = '018f2f3c-0000-7000-8000-000000000001';
+      const ipKey = buildThrottleCounterKey('ip', '192.0.2.1', 'authenticated');
+      const accountKey = buildThrottleCounterKey(
+        'account',
+        accountId,
+        'authenticated',
+      );
+      expect(ipKey.PK).not.toContain('USER#');
+      expect(accountKey.PK).not.toContain('USER#');
     });
   });
 });

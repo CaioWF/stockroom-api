@@ -23,6 +23,11 @@ import {
   SIGNING_KEY_PROVIDER,
   VERIFICATION_KEY_SET_PROVIDER,
 } from '../../../../src/auth/auth.module';
+import { APP_CONFIG } from '../../../../src/shared/config/configuration.module';
+import {
+  AppConfig,
+  parseAppConfig,
+} from '../../../../src/shared/config/environment.schema';
 import { buildTestKeyMaterial, TestKeyMaterial } from './test-key-providers';
 
 export interface TestApp {
@@ -30,18 +35,32 @@ export interface TestApp {
   readonly keyMaterial: TestKeyMaterial;
 }
 
-export async function buildTestApp(): Promise<TestApp> {
+export interface TestAppOptions {
+  readonly configOverrides?: Partial<AppConfig>;
+}
+
+export async function buildTestApp(
+  options: TestAppOptions = {},
+): Promise<TestApp> {
   await ensureLocalTable();
   const keyMaterial = await buildTestKeyMaterial();
 
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(SIGNING_KEY_PROVIDER)
     .useValue(keyMaterial.signingKeyProvider)
     .overrideProvider(VERIFICATION_KEY_SET_PROVIDER)
-    .useValue(keyMaterial.verificationKeySetProvider)
-    .compile();
+    .useValue(keyMaterial.verificationKeySetProvider);
+
+  if (options.configOverrides !== undefined) {
+    builder.overrideProvider(APP_CONFIG).useValue({
+      ...parseAppConfig(process.env),
+      ...options.configOverrides,
+    });
+  }
+
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication();
   await app.init();

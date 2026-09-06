@@ -13,18 +13,6 @@ How this project is brought up and taken down. Fill each line the first time you
 - watch work in flight: `bash scripts/keel-watch.sh` — status pane (features, tasks dispatched, ledger, worktrees) plus a shell per extra worktree; `--no-tmux` renders the same status in one terminal
 <!-- END:keel:environment -->
 
-## Tests
-
-<!-- BEGIN:keel:tests -->
-- unit: `npm run test:unit` (no DynamoDB needed)
-- integration: `npm run test:integration` (needs local DynamoDB up)
-- e2e: `npm run test:e2e` (needs local DynamoDB up; `/auth/login` and `/.well-known/jwks.json`
-  additionally need real AWS SSM credentials — no local Parameter Store emulator exists)
-- one file: `npm run test:e2e -- <path-substring>` — the positional arg matches by file-path
-  substring, not test name; do not use a short substring like `me`, checkouts commonly live under
-  `/home/...` and would match every e2e file
-<!-- END:keel:tests -->
-
 ## SDD Workflow
 
 This project follows spec-driven development. The skill chain, in order, is:
@@ -113,6 +101,16 @@ This Claude Code setup (`CLAUDE.md` + `.claude/`) is the **canonical source**. V
 ## Logging
 
 Use structured JSON for debug/diagnostic logging. Use plain text for user-facing output.
+
+<!-- BEGIN:keel:tests -->
+- unit: `npm run test:unit` (no DynamoDB needed)
+- integration: `npm run test:integration` (needs local DynamoDB up)
+- e2e: `npm run test:e2e` (needs local DynamoDB up; `/auth/login` and `/.well-known/jwks.json`
+  additionally need real AWS SSM credentials — no local Parameter Store emulator exists)
+- one file: `npm run test:e2e -- <path-substring>` — the positional arg matches by file-path
+  substring, not test name; do not use a short substring like `me`, checkouts commonly live under
+  `/home/...` and would match every e2e file
+<!-- END:keel:tests -->
 
 <!-- BEGIN:keel:stack-conventions -->
 ## Stack conventions

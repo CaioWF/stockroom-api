@@ -10,10 +10,12 @@ import type { OpenAPIObject } from 'openapi3-ts/oas30';
 
 import { OPENAPI_DOCUMENT } from './openapi/openapi-document';
 import { Public } from './public.decorator';
+import { NoThrottle } from '../../throttling/presentation/no-throttle.decorator';
 
 @Controller()
 export class OpenApiController {
   @Public()
+  @NoThrottle()
   @Get('openapi.json')
   @HttpCode(HttpStatus.OK)
   document(): OpenAPIObject {

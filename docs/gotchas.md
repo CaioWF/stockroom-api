@@ -31,3 +31,19 @@ under `/home/...`, which contains "me". Fix: use a longer, disambiguating substr
 A `SPEC_DEVIATION` comment inside `scripts/*.ts` never inflates the gate's reported total — its
 `SKIP` set deliberately excludes `scripts/`. A lower-than-expected count there is correct gate
 behavior, not a sign the marker was missed.
+
+## serverless-express shadows Express req.ip
+
+Symptom: trusting Express `req.ip` under the Lambda transport gives an empty or caller-controlled
+identity instead of the ALB-appended hop. Cause: `@codegenie/serverless-express` assigns its own
+`ip` property on the request object, shadowing Express's prototype getter, and ALB events do not
+carry the `requestContext.identity.sourceIp` field that assignment reads. Fix: derive the throttle
+identity directly from the right-most `X-Forwarded-For` entry.
+
+## DynamoDBDocumentClient leaves failed-condition items raw
+
+Symptom: a failed conditional write with `ReturnValuesOnConditionCheckFailure: 'ALL_OLD'` returns
+an `Item`, but mapper code sees raw DynamoDB `AttributeValue` fields rather than plain document
+values. Cause: `DynamoDBDocumentClient` unmarshalls successful responses, not the `Item` attached
+to `ConditionalCheckFailedException`. Fix: explicitly `unmarshall` that exception item before
+branching on rollover or saturation.

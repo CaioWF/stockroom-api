@@ -26,7 +26,7 @@ import request from 'supertest';
 import {
   PROBLEM_CODES,
   ProblemCode,
-} from '../../../src/auth/presentation/problem-details.filter';
+} from '../../../src/shared/presentation/problem-details.filter';
 import { buildTestApp } from '../auth/support/build-test-app';
 import { httpServerOf, ProblemBody } from '../auth/support/http-test-client';
 

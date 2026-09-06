@@ -14,6 +14,9 @@ const ALLOWED_LOG_FIELDS = [
   'accountId',
   'durationMs',
   'context',
+  'scope',
+  'routeGroup',
+  'retryAfterSeconds',
 ] as const;
 
 export type LogSink = (line: string) => void;

@@ -10,6 +10,7 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 
 import { Public } from '../auth/presentation/public.decorator';
+import { NoThrottle } from '../throttling/presentation/no-throttle.decorator';
 
 interface LivenessBody {
   readonly status: 'ok';
@@ -18,6 +19,7 @@ interface LivenessBody {
 @Controller('health')
 export class HealthController {
   @Public()
+  @NoThrottle()
   @Get()
   @HttpCode(HttpStatus.OK)
   check(): LivenessBody {

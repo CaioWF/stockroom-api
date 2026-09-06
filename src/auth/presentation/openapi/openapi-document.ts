@@ -79,7 +79,19 @@ const BEARER_AUTH_SCHEME = 'bearerAuth';
 function problemResponse(description: string): ResponseConfig {
   return {
     description,
-    content: { 'application/json': { schema: ProblemDetailsSchema } },
+    content: { 'application/problem+json': { schema: ProblemDetailsSchema } },
+  };
+}
+
+function rateLimitResponse(): ResponseConfig {
+  return {
+    ...problemResponse('Rate limit exceeded'),
+    headers: {
+      'Retry-After': {
+        description: 'Seconds to wait before retrying',
+        schema: { type: 'integer', minimum: 1 },
+      },
+    },
   };
 }
 
@@ -108,6 +120,7 @@ function registerRegisterRoute(registry: OpenAPIRegistry): void {
       },
       409: problemResponse('An account for this email already exists'),
       422: problemResponse('Invalid email or password length'),
+      429: rateLimitResponse(),
       default: problemResponse('Problem detail (RFC 9457)'),
     },
   });
@@ -129,6 +142,7 @@ function registerLoginRoute(registry: OpenAPIRegistry): void {
         content: { 'application/json': { schema: TokenPairResponseSchema } },
       },
       401: problemResponse('Invalid credentials'),
+      429: rateLimitResponse(),
       default: problemResponse('Problem detail (RFC 9457)'),
     },
   });
@@ -150,6 +164,7 @@ function registerRefreshRoute(registry: OpenAPIRegistry): void {
         content: { 'application/json': { schema: TokenPairResponseSchema } },
       },
       401: problemResponse('Invalid, reused, or expired refresh token'),
+      429: rateLimitResponse(),
       default: problemResponse('Problem detail (RFC 9457)'),
     },
   });
@@ -167,6 +182,7 @@ function registerMeRoute(registry: OpenAPIRegistry): void {
         content: { 'application/json': { schema: MeResponseSchema } },
       },
       401: problemResponse('Missing, invalid, or expired access token'),
+      429: rateLimitResponse(),
       default: problemResponse('Problem detail (RFC 9457)'),
     },
   });
@@ -182,6 +198,7 @@ function registerJwksRoute(registry: OpenAPIRegistry): void {
         description: 'JWK Set',
         content: { 'application/json': { schema: JwksResponseSchema } },
       },
+      429: rateLimitResponse(),
     },
   });
 }

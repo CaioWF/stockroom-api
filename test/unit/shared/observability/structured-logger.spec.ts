@@ -53,4 +53,58 @@ describe('StructuredLogger', () => {
 
     expect(lines[0]).toBe('{}');
   });
+
+  it('emits throttle-specific fields (scope, routeGroup, retryAfterSeconds) when included', () => {
+    const lines: string[] = [];
+    const logger = new StructuredLogger((line) => lines.push(line));
+
+    logger.log({
+      message: 'rate-limit exceeded',
+      scope: 'ip',
+      routeGroup: 'credentials',
+      retryAfterSeconds: 30,
+      correlationId: 'corr-fake-999',
+    });
+
+    expect(lines).toHaveLength(1);
+    const parsed: unknown = JSON.parse(lines[0] ?? '');
+
+    expect(parsed).toEqual({
+      message: 'rate-limit exceeded',
+      scope: 'ip',
+      routeGroup: 'credentials',
+      retryAfterSeconds: 30,
+      correlationId: 'corr-fake-999',
+    });
+  });
+
+  it('still filters unlisted fields even after adding throttle fields', () => {
+    const lines: string[] = [];
+    const logger = new StructuredLogger((line) => lines.push(line));
+
+    logger.log({
+      message: 'throttle event',
+      scope: 'account',
+      routeGroup: 'authenticated',
+      retryAfterSeconds: 60,
+      foo: 'this-should-be-dropped',
+      password: 'fake-secret',
+      internalId: 'secret-internal-value',
+    });
+
+    expect(lines).toHaveLength(1);
+    const emitted = lines[0] ?? '';
+    const parsed: unknown = JSON.parse(emitted);
+
+    expect(parsed).toEqual({
+      message: 'throttle event',
+      scope: 'account',
+      routeGroup: 'authenticated',
+      retryAfterSeconds: 60,
+    });
+
+    expect(emitted).not.toContain('this-should-be-dropped');
+    expect(emitted).not.toContain('fake-secret');
+    expect(emitted).not.toContain('secret-internal-value');
+  });
 });

@@ -20,7 +20,7 @@
 import { SSMClient } from '@aws-sdk/client-ssm';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { Module, Provider } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD, Reflector } from '@nestjs/core';
+import { APP_GUARD, Reflector } from '@nestjs/core';
 
 import {
   ConfigurationModule,
@@ -58,7 +58,6 @@ import { AuthController } from './presentation/auth.controller';
 import { JwksController } from './presentation/jwks.controller';
 import { JwtAuthGuard } from './presentation/jwt-auth.guard';
 import { OpenApiController } from './presentation/openapi.controller';
-import { AuthExceptionFilter } from './presentation/problem-details.filter';
 import { VERIFICATION_KEY_SET_PROVIDER } from './verification-key-set-provider.token';
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
@@ -257,7 +256,6 @@ const jwtAuthGuardProvider: Provider = {
     rotateRefreshTokenProvider,
     DescribeCaller,
     jwtAuthGuardProvider,
-    { provide: APP_FILTER, useClass: AuthExceptionFilter },
   ],
 })
 export class AuthModule {}
