@@ -111,7 +111,7 @@ Use structured JSON for debug/diagnostic logging. Use plain text for user-facing
 - one file: `npm run test:e2e -- <path-substring>` — the positional arg matches by file-path
   substring, not test name; do not use a short substring like `me`, checkouts commonly live under
   `/home/...` and would match every e2e file
-- gates: `bash .specify/gates/run-gates.sh` — the file is not executable, do not call it directly
+- gates: `.specify/gates/run-gates.sh`
 - gates run doc audits, dependency-rule, lint and build, and no test suite. Green gates are not
   green tests: run all three suites separately
 <!-- END:keel:tests -->
