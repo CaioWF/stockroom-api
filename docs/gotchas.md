@@ -19,6 +19,13 @@ cutting off the actual pass/fail summary without any visible truncation marker b
 `[full output: ...]` line. Fix: use `rtk proxy <cmd>` to bypass filtering when you need the real
 tail of a long-running command's output (e.g. a full e2e run).
 
+## rtk rewrites git output, not only truncates it
+
+Symptom: `git log --graph --oneline` through the `rtk` proxy printed a linear history with the
+merge commit missing entirely, and `git status --short` answered `ok` instead of a file list.
+Unlike the truncation trap above, the output looks complete — nothing marks what was dropped.
+Fix: confirm anything you intend to assert about git state with `rtk proxy git ...`.
+
 ## Jest's positional test filter matches file paths, not test names
 
 Symptom: `npm run test:e2e -- me` (intending to target `me.e2e-spec.ts`) runs every e2e file

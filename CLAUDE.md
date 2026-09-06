@@ -105,11 +105,15 @@ Use structured JSON for debug/diagnostic logging. Use plain text for user-facing
 <!-- BEGIN:keel:tests -->
 - unit: `npm run test:unit` (no DynamoDB needed)
 - integration: `npm run test:integration` (needs local DynamoDB up)
-- e2e: `npm run test:e2e` (needs local DynamoDB up; `/auth/login` and `/.well-known/jwks.json`
-  additionally need real AWS SSM credentials — no local Parameter Store emulator exists)
+- e2e: `npm run test:e2e` (needs local DynamoDB up; no AWS credentials needed —
+  `test/e2e/auth/support/build-test-app.ts` overrides both key providers with an in-memory RS256
+  pair. Only running the app by hand needs real SSM)
 - one file: `npm run test:e2e -- <path-substring>` — the positional arg matches by file-path
   substring, not test name; do not use a short substring like `me`, checkouts commonly live under
   `/home/...` and would match every e2e file
+- gates: `bash .specify/gates/run-gates.sh` — the file is not executable, do not call it directly
+- gates run doc audits, dependency-rule, lint and build, and no test suite. Green gates are not
+  green tests: run all three suites separately
 <!-- END:keel:tests -->
 
 <!-- BEGIN:keel:stack-conventions -->
