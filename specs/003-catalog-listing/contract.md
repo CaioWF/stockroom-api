@@ -62,27 +62,24 @@
   never inside pages already served
 - **status**: PASS (evaluator, 2026-09-06)
 
-## AC-6 — cross-account isolation
+## AC-6 — withdrawn
 
-- **proof**: `test/e2e/catalog/account-isolation.e2e-spec.ts`
-- **command**: `npm run test:e2e -- catalog/account-isolation`
-- **observable**: account B's walk contains no product of account A, under B's own cursor and under
-  a cursor issued to A
-- **status**: PASS (evaluator, 2026-09-06)
+Withdrawn by [ADR-0007](../../docs/architecture/adr/0007-one-shared-catalog-partition.md). There is
+one catalog and every authenticated caller reads all of it, so there is no isolation left to prove.
+`test/e2e/catalog/account-isolation.e2e-spec.ts` is deleted rather than adapted.
 
-## AC-7 — wrong-shaped cursor is refused, foreign cursor is honored
+- **status**: WITHDRAWN (2026-09-06)
 
-> Covers AC-7a as well: the fidelity gate collapses the letter suffix onto this number, so the
-> foreign-cursor case is proven here or not at all.
+## AC-7 — wrong-shaped cursor is refused
 
-- **proof**: `test/unit/catalog/domain/catalog-cursor.spec.ts` for the refusal — including a cursor
-  that decodes cleanly but names something other than a product, which a decode-failure check would
-  wave through; `test/e2e/catalog/account-isolation.e2e-spec.ts` for the foreign cursor being
-  honored against the caller's own partition
-- **command**: `npm run test:unit -- catalog/domain/catalog-cursor` then
-  `npm run test:e2e -- catalog/account-isolation`
-- **observable**: `422` with code `INVALID_CURSOR` and no store query issued; and, for a well-formed
-  foreign cursor, `200` carrying only the caller's own products
+> AC-7a is withdrawn by
+> [ADR-0007](../../docs/architecture/adr/0007-one-shared-catalog-partition.md): a cursor is no
+> longer foreign to anything. The refusal half below is unaffected and still proven.
+
+- **proof**: `test/unit/catalog/domain/catalog-cursor.spec.ts` — including a cursor that decodes
+  cleanly but names something other than a product, which a decode-failure check would wave through
+- **command**: `npm run test:unit -- catalog/domain/catalog-cursor`
+- **observable**: `422` with code `INVALID_CURSOR` and no store query issued
 - **status**: PASS (evaluator, 2026-09-06)
 
 ## AC-8 — every invalid limit class is refused

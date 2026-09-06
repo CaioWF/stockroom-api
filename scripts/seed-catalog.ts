@@ -32,14 +32,12 @@ export function buildCatalogSeedProducts(
 }
 
 async function seedCatalog(
-  accountId: string,
   count: number,
   env: NodeJS.ProcessEnv,
 ): Promise<void> {
   const tableName = requireEnv(env, 'TABLE_NAME');
   await writeCatalogSeedProducts(
     tableName,
-    accountId,
     buildCatalogSeedProducts(count),
     env,
   );
@@ -93,15 +91,10 @@ function requireEnv(env: NodeJS.ProcessEnv, name: string): string {
 }
 
 async function main(): Promise<void> {
-  const [accountId, countText = '25'] = process.argv.slice(2);
-  if (accountId === undefined || accountId.trim() === '') {
-    throw new SeedCatalogInputError(
-      'usage: ts-node scripts/seed-catalog.ts <accountId> [count]',
-    );
-  }
+  const [countText = '25'] = process.argv.slice(2);
   const count = Number(countText);
-  await seedCatalog(accountId, count, process.env);
-  console.log(`seeded ${count} catalog products for ${accountId}`);
+  await seedCatalog(count, process.env);
+  console.log(`seeded ${count} catalog products`);
 }
 
 function parseSeedCount(count: number): number {

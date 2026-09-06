@@ -11,7 +11,6 @@ export interface CatalogSeedEnvironment {
 
 export async function writeCatalogSeedProducts(
   tableName: string,
-  accountId: string,
   products: readonly Product[],
   env: CatalogSeedEnvironment,
 ): Promise<void> {
@@ -20,7 +19,7 @@ export async function writeCatalogSeedProducts(
     await documentClient.send(
       new PutCommand({
         TableName: tableName,
-        Item: toProductItem(accountId, product),
+        Item: toProductItem(product),
       }),
     );
   }

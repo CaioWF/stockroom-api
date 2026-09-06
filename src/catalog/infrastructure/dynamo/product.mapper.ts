@@ -13,12 +13,9 @@ export interface ProductItem {
   readonly created_at: string;
 }
 
-export function toProductItem(
-  accountId: string,
-  product: Product,
-): ProductItem {
+export function toProductItem(product: Product): ProductItem {
   return {
-    ...buildProductKey(accountId, product.id),
+    ...buildProductKey(product.id),
     name: product.name,
     sku: product.sku,
     price_amount: product.price.amount,

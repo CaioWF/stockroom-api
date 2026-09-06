@@ -14,6 +14,9 @@ import { CatalogQueryFailedError } from './catalog-query-failed.error';
 export { CatalogQueryFailedError } from './catalog-query-failed.error';
 
 const PRODUCT_PREFIX = 'PRODUCT#';
+// Every product shares one partition (ADR-0007); derived once from the key
+// helper so the two cannot drift apart.
+const CATALOG_PARTITION = buildProductKey('').PK;
 
 export class DynamoProductRepository implements ProductRepository {
   constructor(
@@ -31,7 +34,7 @@ export class DynamoProductRepository implements ProductRepository {
         nextCursor: this.readNextCursor(result.LastEvaluatedKey),
       };
     } catch (error: unknown) {
-      this.logFailure(input.accountId, startedAt);
+      this.logFailure(startedAt);
       throw new CatalogQueryFailedError(errorNameOf(error));
     }
   }
@@ -41,7 +44,7 @@ export class DynamoProductRepository implements ProductRepository {
       TableName: this.tableName,
       KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
       ExpressionAttributeValues: {
-        ':pk': buildProductKey(input.accountId, '').PK,
+        ':pk': CATALOG_PARTITION,
         ':skPrefix': PRODUCT_PREFIX,
       },
       ConsistentRead: true,
@@ -56,10 +59,7 @@ export class DynamoProductRepository implements ProductRepository {
     if (input.cursor === undefined) {
       return undefined;
     }
-    return {
-      PK: buildProductKey(input.accountId, '').PK,
-      SK: input.cursor.sortKey,
-    };
+    return { PK: CATALOG_PARTITION, SK: input.cursor.sortKey };
   }
 
   private readItems(
@@ -79,10 +79,9 @@ export class DynamoProductRepository implements ProductRepository {
     return { productId, sortKey };
   }
 
-  private logFailure(accountId: string, startedAt: number): void {
+  private logFailure(startedAt: number): void {
     this.structuredLogger.log({
       event: 'catalog_query_failed',
-      accountId,
       durationMs: Date.now() - startedAt,
       context: 'catalog',
     });

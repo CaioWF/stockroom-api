@@ -42,16 +42,16 @@ describe('ListCatalog', () => {
   ])('rejects a %s limit', async (_name, limit) => {
     const { useCase, repository } = useCaseWith();
 
-    await expect(
-      useCase.execute({ accountId: 'account-1', limit }),
-    ).rejects.toBeInstanceOf(InvalidPageLimitError);
+    await expect(useCase.execute({ limit })).rejects.toBeInstanceOf(
+      InvalidPageLimitError,
+    );
     expect(repository.requests).toHaveLength(0);
   });
 
   it('uses 25 as the default page limit', async () => {
     const { useCase, repository } = useCaseWith();
 
-    await useCase.execute({ accountId: 'account-1' });
+    await useCase.execute({});
 
     expect(repository.requests[0]?.limit).toBe(25);
   });
@@ -60,7 +60,7 @@ describe('ListCatalog', () => {
     const { useCase, repository } = useCaseWith();
 
     await expect(
-      useCase.execute({ accountId: 'account-1', cursor: 'not-a-cursor' }),
+      useCase.execute({ cursor: 'not-a-cursor' }),
     ).rejects.toBeInstanceOf(InvalidCursorError);
     expect(repository.requests).toHaveLength(0);
   });
@@ -69,7 +69,7 @@ describe('ListCatalog', () => {
     const { useCase, repository } = useCaseWith();
 
     await expect(
-      useCase.execute({ accountId: 'account-1', cursor: ['first', 'second'] }),
+      useCase.execute({ cursor: ['first', 'second'] }),
     ).rejects.toBeInstanceOf(InvalidCursorError);
     expect(repository.requests).toHaveLength(0);
   });
@@ -78,7 +78,6 @@ describe('ListCatalog', () => {
     const { useCase } = useCaseWith();
 
     const result = await useCase.execute({
-      accountId: 'account-1',
       limit: '5',
     });
 

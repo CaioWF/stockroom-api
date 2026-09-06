@@ -37,12 +37,19 @@ export interface TestApp {
 
 export interface TestAppOptions {
   readonly configOverrides?: Partial<AppConfig>;
+  /**
+   * A table of this file's own, created on demand. The catalog is one shared
+   * partition (ADR-0007), so files that assert on exact catalog contents would
+   * otherwise read each other's products across parallel jest workers.
+   */
+  readonly tableName?: string;
 }
 
 export async function buildTestApp(
   options: TestAppOptions = {},
 ): Promise<TestApp> {
-  await ensureLocalTable();
+  const tableName = options.tableName ?? requireEnv('TABLE_NAME');
+  await ensureLocalTable(tableName);
   const keyMaterial = await buildTestKeyMaterial();
 
   const builder = Test.createTestingModule({
@@ -53,9 +60,13 @@ export async function buildTestApp(
     .overrideProvider(VERIFICATION_KEY_SET_PROVIDER)
     .useValue(keyMaterial.verificationKeySetProvider);
 
-  if (options.configOverrides !== undefined) {
+  if (
+    options.configOverrides !== undefined ||
+    options.tableName !== undefined
+  ) {
     builder.overrideProvider(APP_CONFIG).useValue({
       ...parseAppConfig(process.env),
+      tableName,
       ...options.configOverrides,
     });
   }
@@ -71,8 +82,7 @@ export async function buildTestApp(
 // their own JSDoc) — `set-test-environment.ts` picks a fixed table name, so
 // this idempotently creates it once per worker process before the app boots,
 // the same bootstrap `test/integration/*.int-spec.ts` already relies on.
-async function ensureLocalTable(): Promise<void> {
-  const tableName = requireEnv('TABLE_NAME');
+async function ensureLocalTable(tableName: string): Promise<void> {
   const client = new DynamoDBClient({
     region: requireEnv('AWS_REGION'),
     endpoint: requireEnv('DYNAMODB_ENDPOINT'),

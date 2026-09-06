@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Query,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
 
 import { ListCatalog } from '../application/list-catalog.usecase';
-import type { AuthenticatedRequest } from '../../auth/presentation/jwt-auth.guard';
-import { MissingAuthClaimsError } from '../../auth/presentation/missing-auth-claims.error';
 import {
   CatalogPageResponseBody,
   toCatalogPageResponse,
@@ -20,25 +11,15 @@ import { parseListCatalogQuery } from './dto/list-catalog-query.schema';
 export class CatalogController {
   constructor(private readonly listCatalog: ListCatalog) {}
 
+  // The route stays behind the global guard, so an unauthenticated caller
+  // never reaches here. It reads no claim: there is one catalog and the token
+  // decides whether a caller may read, never which products it sees
+  // (ADR-0007).
   @Get()
   @HttpCode(HttpStatus.OK)
-  async list(
-    @Req() request: AuthenticatedRequest,
-    @Query() query: unknown,
-  ): Promise<CatalogPageResponseBody> {
+  async list(@Query() query: unknown): Promise<CatalogPageResponseBody> {
     const { limit, cursor } = parseListCatalogQuery(query);
-    const result = await this.listCatalog.execute({
-      accountId: this.requireAccountId(request),
-      limit,
-      cursor,
-    });
+    const result = await this.listCatalog.execute({ limit, cursor });
     return toCatalogPageResponse(result);
-  }
-
-  private requireAccountId(request: AuthenticatedRequest): string {
-    if (request.authClaims === undefined) {
-      throw new MissingAuthClaimsError();
-    }
-    return request.authClaims.accountId;
   }
 }

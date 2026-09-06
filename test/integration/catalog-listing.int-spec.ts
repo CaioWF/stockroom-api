@@ -1,9 +1,10 @@
-import { randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
+  DeleteCommand,
   DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
+  QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 
 import { ensureTableExists } from '../../scripts/create-table';
@@ -56,26 +57,24 @@ function product(id: string, name: string): Product {
 
 async function seedProduct(
   documentClient: DynamoDBDocumentClient,
-  accountId: string,
   item: Product,
 ): Promise<void> {
   await documentClient.send(
     new PutCommand({
       TableName: TABLE_NAME,
-      Item: toProductItem(accountId, item),
+      Item: toProductItem(item),
     }),
   );
 }
 
 async function readRawProduct(
   documentClient: DynamoDBDocumentClient,
-  accountId: string,
   productId: string,
 ): Promise<Record<string, unknown> | undefined> {
   const result = await documentClient.send(
     new GetCommand({
       TableName: TABLE_NAME,
-      Key: buildProductKey(accountId, productId),
+      Key: buildProductKey(productId),
     }),
   );
   return result.Item;
@@ -90,14 +89,20 @@ describe('DynamoProductRepository (integration)', () => {
     documentClient = DynamoDBDocumentClient.from(client);
   });
 
+  // One shared catalog partition (ADR-0007), so every test in this file writes
+  // to the same place. A per-test account id used to keep them apart; emptying
+  // the partition is what replaces it.
+  beforeEach(async () => {
+    await emptyCatalogPartition(documentClient);
+  });
+
   it('reads a product immediately after write and stores no ttl attribute', async () => {
-    const accountId = randomUUID();
     const item = product(IDS[0], 'Visible product');
-    await seedProduct(documentClient, accountId, item);
+    await seedProduct(documentClient, item);
 
     const repository = new DynamoProductRepository(documentClient, TABLE_NAME);
-    const page = await repository.list({ accountId, limit: 25 });
-    const rawItem = await readRawProduct(documentClient, accountId, item.id);
+    const page = await repository.list({ limit: 25 });
+    const rawItem = await readRawProduct(documentClient, item.id);
 
     expect(page.items).toEqual([item]);
     expect(page.nextCursor).toBeNull();
@@ -105,13 +110,8 @@ describe('DynamoProductRepository (integration)', () => {
   });
 
   it('walks pages in sort-key order with one query per page', async () => {
-    const accountId = randomUUID();
     for (const [index, id] of IDS.entries()) {
-      await seedProduct(
-        documentClient,
-        accountId,
-        product(id, `Item ${index}`),
-      );
+      await seedProduct(documentClient, product(id, `Item ${index}`));
     }
     const counter = new CountingDocumentClient(documentClient);
     const repository = new DynamoProductRepository(
@@ -119,9 +119,8 @@ describe('DynamoProductRepository (integration)', () => {
       TABLE_NAME,
     );
 
-    const first = await repository.list({ accountId, limit: 2 });
+    const first = await repository.list({ limit: 2 });
     const second = await repository.list({
-      accountId,
       limit: 2,
       cursor: first.nextCursor ?? undefined,
     });
@@ -134,12 +133,11 @@ describe('DynamoProductRepository (integration)', () => {
   });
 
   it('returns same-millisecond products exactly once', async () => {
-    const accountId = randomUUID();
-    await seedProduct(documentClient, accountId, product(IDS[0], 'First'));
-    await seedProduct(documentClient, accountId, product(IDS[1], 'Second'));
+    await seedProduct(documentClient, product(IDS[0], 'First'));
+    await seedProduct(documentClient, product(IDS[1], 'Second'));
 
     const repository = new DynamoProductRepository(documentClient, TABLE_NAME);
-    const page = await repository.list({ accountId, limit: 25 });
+    const page = await repository.list({ limit: 25 });
 
     expect(new Set(page.items.map((item) => item.id))).toEqual(
       new Set([IDS[0], IDS[1]]),
@@ -147,3 +145,40 @@ describe('DynamoProductRepository (integration)', () => {
     expect(page.nextCursor).toBeNull();
   });
 });
+
+async function emptyCatalogPartition(
+  documentClient: DynamoDBDocumentClient,
+): Promise<void> {
+  const existing = await documentClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+      ExpressionAttributeValues: {
+        ':pk': buildProductKey('').PK,
+        ':skPrefix': 'PRODUCT#',
+      },
+    }),
+  );
+  const items: Record<string, unknown>[] = existing.Items ?? [];
+  for (const item of items) {
+    await documentClient.send(
+      new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: catalogItemKey(item),
+      }),
+    );
+  }
+}
+
+// The document client types item fields as `any`; narrow at the boundary
+// rather than letting an unchecked value into the delete request.
+function catalogItemKey(item: Record<string, unknown>): {
+  PK: string;
+  SK: string;
+} {
+  const { PK, SK } = item;
+  if (typeof PK !== 'string' || typeof SK !== 'string') {
+    throw new Error('catalog item is missing its key');
+  }
+  return { PK, SK };
+}

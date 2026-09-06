@@ -28,14 +28,13 @@ describe('DynamoProductRepository', () => {
       new StructuredLogger(sink),
     );
 
-    await expect(
-      repository.list({ accountId: 'account-1', limit: 25 }),
-    ).rejects.toBeInstanceOf(CatalogQueryFailedError);
+    await expect(repository.list({ limit: 25 })).rejects.toBeInstanceOf(
+      CatalogQueryFailedError,
+    );
     const fields = parseCatalogFailureLog(lines[0] ?? '{}');
 
     expect(fields).toEqual({
       event: 'catalog_query_failed',
-      accountId: 'account-1',
       durationMs: fields.durationMs,
       context: 'catalog',
     });
@@ -45,7 +44,6 @@ describe('DynamoProductRepository', () => {
 
 interface CatalogFailureLog {
   readonly event: string;
-  readonly accountId: string;
   readonly durationMs: number;
   readonly context: string;
 }
@@ -65,7 +63,6 @@ function isCatalogFailureLog(value: unknown): value is CatalogFailureLog {
   const fields = value as Record<string, unknown>;
   return (
     typeof fields.event === 'string' &&
-    typeof fields.accountId === 'string' &&
     typeof fields.durationMs === 'number' &&
     typeof fields.context === 'string'
   );

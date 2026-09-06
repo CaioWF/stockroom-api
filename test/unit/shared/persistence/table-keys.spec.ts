@@ -92,16 +92,24 @@ describe('table-keys', () => {
     const accountId = '018f2f3c-0000-7000-8000-000000000001';
     const productId = '018f2f3c-9999-7000-8000-000000000123';
 
-    it('produces the documented CATALOG#/PRODUCT# pair', () => {
-      expect(buildProductKey(accountId, productId)).toEqual({
-        PK: `CATALOG#${accountId}`,
+    // ADR-0007: one shared catalog, so the partition is fixed and carries no
+    // account. Two products land together whoever wrote them.
+    it('produces the documented CATALOG/PRODUCT# pair', () => {
+      expect(buildProductKey(productId)).toEqual({
+        PK: 'CATALOG',
         SK: `PRODUCT#${productId}`,
       });
     });
 
+    it('puts every product in the same partition', () => {
+      const other = '018f2f3c-9999-7000-8000-000000000999';
+
+      expect(buildProductKey(productId).PK).toBe(buildProductKey(other).PK);
+    });
+
     it('keeps catalog data outside the account profile partition', () => {
       const accountKey = buildAccountKey(accountId);
-      const productKey = buildProductKey(accountId, productId);
+      const productKey = buildProductKey(productId);
 
       expect(productKey.PK).not.toBe(accountKey.PK);
       expect(productKey.PK).not.toContain('USER#');

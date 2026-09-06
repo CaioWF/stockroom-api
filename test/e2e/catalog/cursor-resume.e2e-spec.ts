@@ -7,21 +7,31 @@ import { authenticateTestAccount } from './support/authenticate-test-account';
 import {
   catalogProduct,
   CatalogPageBody,
+  emptyCatalog,
   seedCatalogProducts,
 } from './support/seed-catalog';
 
+// Distinct id range from the other catalog e2e files: one shared partition
+// (ADR-0007) plus parallel workers means overlapping ids would collide on the
+// same sort key.
 const IDS = [
-  '018f2f3c-0000-7000-8000-000000000001',
-  '018f2f3c-0001-7000-8000-000000000002',
-  '018f2f3c-0002-7000-8000-000000000003',
-  '018f2f3c-0003-7000-8000-000000000004',
+  '018f2f3c-0b00-7000-8000-000000000001',
+  '018f2f3c-0b01-7000-8000-000000000002',
+  '018f2f3c-0b02-7000-8000-000000000003',
+  '018f2f3c-0b03-7000-8000-000000000004',
 ] as const;
 
 describe('GET /products cursor resume (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    ({ app } = await buildTestApp());
+    ({ app } = await buildTestApp({
+      tableName: 'stockroom-e2e-catalog-resume',
+    }));
+  });
+
+  beforeEach(async () => {
+    await emptyCatalog(app);
   });
 
   afterAll(async () => {
@@ -32,7 +42,6 @@ describe('GET /products cursor resume (e2e)', () => {
     const account = await authenticateTestAccount(app, 'catalog-resume');
     await seedCatalogProducts(
       app,
-      account.accountId,
       IDS.slice(0, 3).map((id, index) => catalogProduct(id, String(index))),
     );
     const first = await request(httpServerOf(app))
@@ -41,9 +50,7 @@ describe('GET /products cursor resume (e2e)', () => {
       .set('Authorization', `Bearer ${account.accessToken}`)
       .expect(200);
     const firstPage = first.body as CatalogPageBody;
-    await seedCatalogProducts(app, account.accountId, [
-      catalogProduct(IDS[3], 'later'),
-    ]);
+    await seedCatalogProducts(app, [catalogProduct(IDS[3], 'later')]);
 
     const resumed = await request(httpServerOf(app))
       .get('/products')

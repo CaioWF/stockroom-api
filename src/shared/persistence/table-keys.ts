@@ -50,12 +50,16 @@ export function buildThrottleCounterKey(
 }
 
 /**
- * Product item key, isolated from USER# account data so large catalogs do
- * not share partition budget with profiles or refresh tokens.
+ * Product item key, isolated from USER# account data so the catalog does not
+ * share partition budget with profiles or refresh tokens.
+ *
+ * The partition is fixed: there is one shared catalog and an account does not
+ * own or scope any product (ADR-0007). The throughput ceiling that one hot
+ * partition implies is named in that ADR, along with the sharded key that
+ * would answer it if the ceiling ever became real.
  */
-export function buildProductKey(
-  accountId: string,
-  productId: string,
-): TableKey {
-  return { PK: `CATALOG#${accountId}`, SK: `PRODUCT#${productId}` };
+const CATALOG_PARTITION = 'CATALOG';
+
+export function buildProductKey(productId: string): TableKey {
+  return { PK: CATALOG_PARTITION, SK: `PRODUCT#${productId}` };
 }

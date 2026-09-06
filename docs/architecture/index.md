@@ -1,2 +1,2 @@
 # Subdirectories
-* [adr/](adr/index.md) - 6 concept(s)
+* [adr/](adr/index.md) - 7 concept(s)

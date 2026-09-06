@@ -7,20 +7,29 @@ import { authenticateTestAccount } from './support/authenticate-test-account';
 import {
   catalogProduct,
   CatalogPageBody,
+  emptyCatalog,
   seedCatalogProducts,
 } from './support/seed-catalog';
 
+// One shared catalog partition (ADR-0007), so every e2e file writes to the
+// same place and may run in a parallel worker. Each file owns a distinct id
+// range and asserts only about its own ids, which is what the per-account
+// partition used to provide.
 const IDS = [
-  '018f2f3c-0000-7000-8000-000000000001',
-  '018f2f3c-0001-7000-8000-000000000002',
-  '018f2f3c-0002-7000-8000-000000000003',
+  '018f2f3c-0a00-7000-8000-000000000001',
+  '018f2f3c-0a01-7000-8000-000000000002',
+  '018f2f3c-0a02-7000-8000-000000000003',
 ] as const;
 
 describe('GET /products page walk (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    ({ app } = await buildTestApp());
+    ({ app } = await buildTestApp({ tableName: 'stockroom-e2e-catalog-walk' }));
+  });
+
+  beforeEach(async () => {
+    await emptyCatalog(app);
   });
 
   afterAll(async () => {
@@ -31,7 +40,6 @@ describe('GET /products page walk (e2e)', () => {
     const account = await authenticateTestAccount(app, 'catalog-walk');
     await seedCatalogProducts(
       app,
-      account.accountId,
       IDS.map((id, index) => catalogProduct(id, String(index))),
     );
 
@@ -54,7 +62,7 @@ describe('GET /products page walk (e2e)', () => {
 
   it('returns a single terminal page for a small catalog', async () => {
     const account = await authenticateTestAccount(app, 'catalog-small');
-    await seedCatalogProducts(app, account.accountId, [
+    await seedCatalogProducts(app, [
       catalogProduct(IDS[0], 'small-a'),
       catalogProduct(IDS[1], 'small-b'),
     ]);
@@ -72,9 +80,7 @@ describe('GET /products page walk (e2e)', () => {
 
   it('returns an exact page and product response shape', async () => {
     const account = await authenticateTestAccount(app, 'catalog-shape');
-    await seedCatalogProducts(app, account.accountId, [
-      catalogProduct(IDS[0], 'shape'),
-    ]);
+    await seedCatalogProducts(app, [catalogProduct(IDS[0], 'shape')]);
 
     const response = await request(httpServerOf(app))
       .get('/products')

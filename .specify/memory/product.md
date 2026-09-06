@@ -8,9 +8,10 @@
 
 ## Product
 
-- Stockroom is a hosted product-catalog API: a merchant registers their goods once, and any
-  application they own or authorize reads that catalog over HTTP through an authenticated,
-  paginated, rate-limited endpoint.
+- Stockroom is a hosted product-catalog API: it serves one catalog over HTTP through an
+  authenticated, paginated, rate-limited endpoint. An account is a credential for reaching the
+  API, not a boundary that partitions the data — every authenticated caller reads the same
+  catalog.
 - It exists because a catalog is the first backend every commerce-adjacent product needs and the
   last one anybody wants to build twice. The read path is the same everywhere — authenticate the
   caller, page through items, survive traffic spikes — so it is worth solving once as a service
@@ -22,7 +23,7 @@
   integration, or a mobile app, who need a catalog behind an API but have no platform team to
   build and operate one.
 - Jobs to be done:
-  - Sign in with an account and obtain a short-lived token to call the API on behalf of a merchant.
+  - Sign in with an account and obtain a short-lived token to call the API.
   - List the catalog page by page from a client that cannot hold the whole dataset in memory.
   - Keep serving reads while one noisy caller hammers the endpoint.
   - Read the API contract and integrate without asking anyone how it works.
@@ -51,8 +52,12 @@
 - Not an inventory or ERP system: Stockroom does not track stock levels, warehouses, purchase
   orders, or fulfillment.
 - Not a commerce platform: no cart, no checkout, no payments, no orders, no shipping.
-- Not a marketplace: a catalog belongs to one merchant, and the product does not broker discovery
-  or transactions between merchants and end consumers.
+- Not multi-tenant: the service holds one catalog, and accounts do not own or partition products.
+  Authentication decides whether a caller may read, never which records it may see. An earlier
+  draft of this brief said a catalog belongs to one merchant; that was a misreading, and features
+  built on it are corrected rather than preserved.
+- Not a marketplace: the product does not broker discovery or transactions between sellers and end
+  consumers.
 - Not a CMS or a DAM: it stores product records, not rich editorial content or media libraries.
 - Not an identity provider: it signs callers into Stockroom and issues nothing another system
   should trust as a general-purpose identity.

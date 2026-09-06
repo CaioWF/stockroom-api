@@ -7,7 +7,6 @@ import { Product } from '../domain/product';
 import { ProductRepository } from '../domain/ports/product-repository';
 
 export interface ListCatalogInput {
-  readonly accountId: string;
   readonly limit?: unknown;
   readonly cursor?: unknown;
 }
@@ -26,7 +25,6 @@ export class ListCatalog {
 
   async execute(input: ListCatalogInput): Promise<ListCatalogResult> {
     const page = await this.productRepository.list({
-      accountId: input.accountId,
       limit: parseLimit(input.limit),
       cursor: parseCursor(input.cursor),
     });
