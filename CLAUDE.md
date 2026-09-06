@@ -104,10 +104,14 @@ Use structured JSON for debug/diagnostic logging. Use plain text for user-facing
 
 <!-- BEGIN:keel:tests -->
 - unit: `npm run test:unit` (no DynamoDB needed)
-- integration: `npm run test:integration` (needs local DynamoDB up)
+- integration: `npm run test:integration` (needs local DynamoDB up; needs no env vars — each
+  `*.int-spec.ts` calls `ensureTableExists` with its own table name and endpoint)
 - e2e: `npm run test:e2e` (needs local DynamoDB up; no AWS credentials needed —
   `test/e2e/auth/support/build-test-app.ts` overrides both key providers with an in-memory RS256
   pair. Only running the app by hand needs real SSM)
+- e2e env: `test/e2e/auth/support/set-test-environment.ts` sets every variable with `setIfAbsent`,
+  so no `.env` is needed; `TABLE_NAME=<fresh> npm run test:e2e` overrides the default
+  `stockroom-auth-e2e` table, which is how a run starts with empty throttle counters
 - one file: `npm run test:e2e -- <path-substring>` — the positional arg matches by file-path
   substring, not test name; do not use a short substring like `me`, checkouts commonly live under
   `/home/...` and would match every e2e file

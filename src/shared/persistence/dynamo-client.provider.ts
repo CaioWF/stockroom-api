@@ -8,6 +8,8 @@ import type { Provider } from '@nestjs/common';
 import type { AppConfig } from '../config/environment.schema';
 import { APP_CONFIG } from '../config/configuration.module';
 
+export type DynamoDocumentClient = DynamoDBDocumentClient;
+
 /**
  * DI token for the shared document client. Nest providers are singletons by
  * default, so this resolves once per running container — DynamoDB

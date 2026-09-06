@@ -57,7 +57,6 @@ import { ParameterStoreVerificationKeySetProvider } from './infrastructure/keys/
 import { AuthController } from './presentation/auth.controller';
 import { JwksController } from './presentation/jwks.controller';
 import { JwtAuthGuard } from './presentation/jwt-auth.guard';
-import { OpenApiController } from './presentation/openapi.controller';
 import { VERIFICATION_KEY_SET_PROVIDER } from './verification-key-set-provider.token';
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
@@ -240,7 +239,7 @@ const jwtAuthGuardProvider: Provider = {
 
 @Module({
   imports: [ConfigurationModule, PersistenceModule, ObservabilityModule],
-  controllers: [AuthController, JwksController, OpenApiController],
+  controllers: [AuthController, JwksController],
   providers: [
     ssmClientProvider,
     signingKeyProviderProvider,

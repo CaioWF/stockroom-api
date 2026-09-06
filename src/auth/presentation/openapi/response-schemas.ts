@@ -3,10 +3,9 @@
  * document (AC-26). Each mirrors an existing response-body interface —
  * `RegisterResponseBody` (auth.controller.ts), `AuthenticateAccountResult`
  * (authenticate-account.usecase.ts, also `RotateRefreshToken`'s success
- * shape), `DescribeCallerResult` (describe-caller.usecase.ts), the JWK Set
- * body (jwks.controller.ts), and `LivenessBody` (health.controller.ts) —
- * without importing those interfaces directly, since none of them are zod
- * schemas themselves (see openapi-document.ts's module doc).
+ * shape), `DescribeCallerResult` (describe-caller.usecase.ts), and the JWK
+ * Set body (jwks.controller.ts) without importing those interfaces directly,
+ * since none of them are zod schemas themselves.
  */
 import './extend-zod';
 
@@ -46,7 +45,3 @@ export const JwksResponseSchema = z
     }),
   })
   .openapi('JwksResponse');
-
-export const HealthResponseSchema = z
-  .object({ status: z.literal('ok') })
-  .openapi('HealthResponse');

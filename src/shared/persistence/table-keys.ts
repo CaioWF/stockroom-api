@@ -48,3 +48,14 @@ export function buildThrottleCounterKey(
 ): TableKey {
   return { PK: `THROTTLE#${scope}#${identity}`, SK: routeGroup };
 }
+
+/**
+ * Product item key, isolated from USER# account data so large catalogs do
+ * not share partition budget with profiles or refresh tokens.
+ */
+export function buildProductKey(
+  accountId: string,
+  productId: string,
+): TableKey {
+  return { PK: `CATALOG#${accountId}`, SK: `PRODUCT#${productId}` };
+}

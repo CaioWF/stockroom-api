@@ -54,3 +54,12 @@ an `Item`, but mapper code sees raw DynamoDB `AttributeValue` fields rather than
 values. Cause: `DynamoDBDocumentClient` unmarshalls successful responses, not the `Item` attached
 to `ConditionalCheckFailedException`. Fix: explicitly `unmarshall` that exception item before
 branching on rollover or saturation.
+
+## secrets-guard blocks the whole Bash call, not the offending clause
+
+Symptom: a command is refused with `[keel:secrets-guard] Blocked read of a secret file (.env)`
+even though the clause you cared about only read `.env.example`. Cause: the hook matches a secret
+token anywhere in the command string and blocks as soon as any read verb also appears, so
+`cat .env.example; ls -la .env` dies on the second clause and returns nothing for the first.
+`.env.example` and its siblings are on the hook's safe list (`SAFE_ENV`); a bare `.env` is not.
+Fix: keep `.env` out of the command text entirely — read `.env.example` for the config shape.

@@ -74,6 +74,8 @@ export const PROBLEM_CODES = [
   'INVALID_ACCESS_TOKEN',
   'SERVICE_UNAVAILABLE',
   'RATE_LIMIT_EXCEEDED',
+  'INVALID_CURSOR',
+  'INVALID_PAGE_LIMIT',
 ] as const;
 
 export type ProblemCode = (typeof PROBLEM_CODES)[number];

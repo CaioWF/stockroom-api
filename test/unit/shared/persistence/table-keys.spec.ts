@@ -1,9 +1,11 @@
 import {
   buildAccountKey,
   buildEmailLockKey,
+  buildProductKey,
   buildRefreshTokenKey,
   buildThrottleCounterKey,
 } from '../../../../src/shared/persistence/table-keys';
+import { PROBLEM_CODES } from '../../../../src/shared/presentation/problem-details.filter';
 
 describe('table-keys', () => {
   describe('buildAccountKey', () => {
@@ -83,6 +85,34 @@ describe('table-keys', () => {
       );
       expect(ipKey.PK).not.toContain('USER#');
       expect(accountKey.PK).not.toContain('USER#');
+    });
+  });
+
+  describe('buildProductKey', () => {
+    const accountId = '018f2f3c-0000-7000-8000-000000000001';
+    const productId = '018f2f3c-9999-7000-8000-000000000123';
+
+    it('produces the documented CATALOG#/PRODUCT# pair', () => {
+      expect(buildProductKey(accountId, productId)).toEqual({
+        PK: `CATALOG#${accountId}`,
+        SK: `PRODUCT#${productId}`,
+      });
+    });
+
+    it('keeps catalog data outside the account profile partition', () => {
+      const accountKey = buildAccountKey(accountId);
+      const productKey = buildProductKey(accountId, productId);
+
+      expect(productKey.PK).not.toBe(accountKey.PK);
+      expect(productKey.PK).not.toContain('USER#');
+    });
+  });
+
+  describe('catalog problem codes', () => {
+    it('publishes both catalog paging errors in the closed problem-code set', () => {
+      expect(PROBLEM_CODES).toEqual(
+        expect.arrayContaining(['INVALID_CURSOR', 'INVALID_PAGE_LIMIT']),
+      );
     });
   });
 });

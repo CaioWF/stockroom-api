@@ -38,6 +38,12 @@ and the filter injects the array of arrays and flattens it once.
 A row must opt in to exposing `exception.message` via `exposeMessage`, applying the constitution's
 allow-list rule to message disclosure: a row that forgets the field leaks nothing.
 
+The closed `code` set is the one thing `shared` does name, as the runtime array `PROBLEM_CODES`
+with `ProblemCode` derived from it, because the published OpenAPI document's `code` enum has to
+generate from exactly one array or the contract and the filter drift apart. Contexts assert
+membership (`'X' satisfies ProblemCode`) rather than unioning their own. So a new code costs two
+edits — the array in `shared`, and the context's own row — plus the composition-root entry.
+
 ## Alternatives considered
 
 - **Keep the filter in `auth`, have throttling import `AuthModule`** — makes one bounded context
@@ -47,16 +53,20 @@ allow-list rule to message disclosure: a row that forgets the field leaks nothin
   confirms. The most dangerous option, because it looks correct until a row goes missing.
 - **An `if`-chain inside the filter** — grows with every context and forces `shared` to import
   feature-specific exception types.
-- **Declare the closed `code` union in `shared`** — one line per new code, and `shared` starts
-  naming concepts it must not know about. The narrowing now happens in each context's own rows file.
+- **Let each context union its own codes** — keeps `shared` from naming any feature concept at all,
+  and leaves the generated OpenAPI `code` enum with no single array to build from, so the published
+  contract could disagree with what the filter emits. Rejected for that reason; the closed set stays
+  in `shared` and only the matching logic is contributed.
 
 ## Consequences
 
-- **Positive:** `shared` depends on nothing feature-specific, verified by the dependency-rule gate;
-  adding a context is one rows file plus one entry at the composition root; message disclosure is
-  closed by default.
+- **Positive:** `shared` carries no feature-specific exception type or matching logic, verified by
+  the dependency-rule gate; the published `code` enum cannot drift from what the filter emits;
+  message disclosure is closed by default.
 - **Negative / trade-offs:** the composition root must be edited for every new contributor, and
   forgetting it is not a compile error — the context's rows simply do not exist, and its exceptions
-  fall through to the filter's default mapping. Nothing enforces that step mechanically.
+  fall through to the filter's default mapping, which is a `503`. Nothing enforces that step
+  mechanically. Adding a code also touches two files in two layers, so the closed set is a small
+  shared bottleneck by design.
 - **Neutral:** the filter moved from `src/auth/presentation` to `src/shared/presentation`, and
   auth's rows were extracted into `auth-problem-mappings.ts`.

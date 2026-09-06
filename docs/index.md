@@ -9,4 +9,4 @@ okf_version: "0.1"
 * [Project state](STATE.md) - Between-session work-state tracking the current active feature, recent decisions, blockers, and deferred ideas.
 
 # Subdirectories
-* [architecture/](architecture/index.md) - 4 concept(s)
+* [architecture/](architecture/index.md) - 5 concept(s)
