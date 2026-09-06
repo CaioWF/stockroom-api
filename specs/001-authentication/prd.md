@@ -48,7 +48,8 @@
   - The product has no mail path, so nothing here may depend on sending email. That rules out
     email verification, password reset, and a generic-response registration flow.
   - Registration is public and reports duplicate addresses, so email enumeration is possible and
-    is an accepted, recorded decision — revisited in `specs/002-request-throttling`.
+    is an accepted, recorded decision — settled in
+    [ADR-0006](../../docs/architecture/adr/0006-accept-email-enumeration-at-registration.md).
   - There is no throttling until `specs/002-request-throttling`, so this feature ships no control
     whose absence would be load-bearing, and deliberately ships no account lockout: a lockout
     reachable by any stranger would be a denial of service against the account holder, with no

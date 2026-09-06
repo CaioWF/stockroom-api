@@ -233,5 +233,5 @@ date: 2026-09-03
   — `specs/004-cloud-infrastructure`.
 - Any user interface — `specs/005-catalog-console`.
 - Email enumeration is not mitigated. Registration reports duplicates, so an address can be
-  probed; the decision is recorded rather than defended, and is revisited in
-  `specs/002-request-throttling`.
+  probed; the decision is recorded rather than defended, and is settled in
+  [ADR-0006](../../docs/architecture/adr/0006-accept-email-enumeration-at-registration.md).

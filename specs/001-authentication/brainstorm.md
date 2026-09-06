@@ -169,14 +169,14 @@ date: 2026-09-02
 
 ## Open Decisions
 
-- **Email enumeration — accepted, and revisited in `002`.** `POST /auth/register` returns `409` on
+- **Email enumeration — accepted; settled in [ADR-0006](../../docs/architecture/adr/0006-accept-email-enumeration-at-registration.md).** `POST /auth/register` returns `409` on
   a duplicate, which confirms an address is registered. An earlier draft tried to close the
   matching oracle on sign-in with a dummy hash on the miss path; that is removed. The reasoning:
   any public registration endpoint that reports duplicates leaks the same fact for one
   unauthenticated request, so the sign-in defence spent an argon2 execution per miss — and part of
   the function's memory sizing — to close a door whose neighbour stands open. Half a defence is
-  worse than none, because it costs and does not protect. `002` revisits whether per-source
-  throttling alone is enough, or whether registration needs a challenge.
+  worse than none, because it costs and does not protect. This paragraph left the question to
+  `002`, which never took it up; ADR-0006 closes it with a decision instead of another deferral.
 - **Sign-in timing.** With enumeration accepted, the timing difference between an unknown address
   and a wrong password leaks nothing the `409` does not already give away, so no equalization is
   attempted. Recorded so that a future reviewer sees a decision rather than an oversight. Note for
