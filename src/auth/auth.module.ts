@@ -17,6 +17,8 @@
  * testing-module `overrideProvider`, never by changing this file.
  */
 
+import { join } from 'node:path';
+
 import { SSMClient } from '@aws-sdk/client-ssm';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { Module, Provider } from '@nestjs/common';
@@ -51,6 +53,8 @@ import { SystemClock } from './infrastructure/crypto/system-clock';
 import { UuidV7Generator } from './infrastructure/crypto/uuid-v7-generator';
 import { DynamoRefreshTokenRepository } from './infrastructure/dynamo/refresh-token.repository';
 import { DynamoUserRepository } from './infrastructure/dynamo/user.repository';
+import { FileSystemSigningKeyProvider } from './infrastructure/keys/file-system-signing-key.provider';
+import { FileSystemVerificationKeySetProvider } from './infrastructure/keys/file-system-verification-key-set.provider';
 import { ParameterStoreSigningKeyProvider } from './infrastructure/keys/parameter-store-signing-key.provider';
 import { ParameterStoreVerificationKeySetProvider } from './infrastructure/keys/parameter-store-verification-key-set.provider';
 
@@ -78,13 +82,19 @@ const ssmClientProvider: Provider = {
   inject: [APP_CONFIG],
 };
 
+// The local PEM pair `npm run keys:generate` writes. Fixed path, matching
+// scripts/generate-dev-keys.ts, which hardcodes the same directory.
+const LOCAL_KEYS_DIRECTORY = join(process.cwd(), 'keys');
+
 const signingKeyProviderProvider: Provider = {
   provide: SIGNING_KEY_PROVIDER,
   useFactory: (ssmClient: SSMClient, config: AppConfig): SigningKeyProvider =>
-    new ParameterStoreSigningKeyProvider(
-      ssmClient,
-      config.signingKeyParameterName,
-    ),
+    config.keySource === 'filesystem'
+      ? new FileSystemSigningKeyProvider(LOCAL_KEYS_DIRECTORY)
+      : new ParameterStoreSigningKeyProvider(
+          ssmClient,
+          config.signingKeyParameterName,
+        ),
   inject: [SSM_CLIENT, APP_CONFIG],
 };
 
@@ -94,10 +104,12 @@ const verificationKeySetProviderProvider: Provider = {
     ssmClient: SSMClient,
     config: AppConfig,
   ): VerificationKeySetProvider =>
-    new ParameterStoreVerificationKeySetProvider(
-      ssmClient,
-      config.verificationKeysParameterName,
-    ),
+    config.keySource === 'filesystem'
+      ? new FileSystemVerificationKeySetProvider(LOCAL_KEYS_DIRECTORY)
+      : new ParameterStoreVerificationKeySetProvider(
+          ssmClient,
+          config.verificationKeysParameterName,
+        ),
   inject: [SSM_CLIENT, APP_CONFIG],
 };
 

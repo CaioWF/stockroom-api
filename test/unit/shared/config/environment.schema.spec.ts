@@ -21,6 +21,8 @@ describe('parseAppConfig', () => {
     const config = parseAppConfig(validEnv());
 
     expect(config).toEqual({
+      // validEnv() sets no NODE_ENV, so this also pins the safe default
+      keySource: 'parameter-store',
       tableName: 'stockroom-table',
       awsRegion: 'us-east-1',
       dynamodbEndpoint: 'http://localhost:8000',
@@ -198,5 +200,36 @@ describe('parseAppConfig', () => {
     expect(config.throttleLocalCacheMaxEntries).toBe(20000);
     expect(config.throttleStoreDeadlineMilliseconds).toBe(1000);
     expect(config.throttleStoreMaxAttempts).toBe(5);
+  });
+});
+
+// AC-2: the key source is an allow-list. Only the exact string `development`
+// selects the local PEM pair; every other value, including an unset one,
+// selects Parameter Store. The Lambda runtime does not set NODE_ENV, so the
+// deployed function must land on Parameter Store without being configured to.
+describe('parseAppConfig key source', () => {
+  it('selects the filesystem pair for NODE_ENV=development', () => {
+    expect(
+      parseAppConfig({ ...validEnv(), NODE_ENV: 'development' }).keySource,
+    ).toBe('filesystem');
+  });
+
+  it.each([
+    ['production', 'production'],
+    ['staging', 'staging'],
+    ['an empty value', ''],
+    ['a differently-cased spelling', 'Development'],
+    ['a value with surrounding space', ' development '],
+  ])('selects Parameter Store for %s', (_name, nodeEnv) => {
+    expect(parseAppConfig({ ...validEnv(), NODE_ENV: nodeEnv }).keySource).toBe(
+      'parameter-store',
+    );
+  });
+
+  it('selects Parameter Store when NODE_ENV is unset', () => {
+    const env = validEnv();
+    delete env.NODE_ENV;
+
+    expect(parseAppConfig(env).keySource).toBe('parameter-store');
   });
 });

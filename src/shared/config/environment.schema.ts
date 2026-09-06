@@ -62,6 +62,7 @@ const positiveIntegerWithDefault = (defaultValue: number) =>
     );
 
 const rawEnvironmentSchema = z.object({
+  NODE_ENV: z.string().optional(),
   TABLE_NAME: requiredString,
   AWS_REGION: requiredString,
   DYNAMODB_ENDPOINT: optionalUrl,
@@ -120,11 +121,33 @@ const rawEnvironmentSchema = z.object({
 type RawEnvironment = z.infer<typeof rawEnvironmentSchema>;
 
 /**
+ * Where the auth module reads its RS256 keys from. Normalized here, once, so
+ * no other module tests the raw environment variable.
+ */
+export type KeySource = 'filesystem' | 'parameter-store';
+
+const LOCAL_KEY_SOURCE_ENVIRONMENT = 'development';
+
+/**
+ * Allow-list, deliberately: only the exact string `development` selects the
+ * local PEM pair, and every other value — unset, empty, differently cased —
+ * selects Parameter Store. The Lambda runtime does not set NODE_ENV, so an
+ * inverted check would put the deployed function on the local provider by
+ * default, which is the failure this direction exists to prevent.
+ */
+function toKeySource(nodeEnv: string | undefined): KeySource {
+  return nodeEnv === LOCAL_KEY_SOURCE_ENVIRONMENT
+    ? 'filesystem'
+    : 'parameter-store';
+}
+
+/**
  * The service's parsed, camelCase configuration. Field names diverge from
  * their SCREAMING_SNAKE environment counterparts deliberately — this is the
  * single place that mapping is declared, per the naming lens.
  */
 export interface AppConfig {
+  keySource: KeySource;
   tableName: string;
   awsRegion: string;
   dynamodbEndpoint?: string;
@@ -179,6 +202,7 @@ function toAuthAndPersistenceConfig(
   raw: RawEnvironment,
 ): Omit<AppConfig, ThrottleConfigKey> {
   return {
+    keySource: toKeySource(raw.NODE_ENV),
     tableName: raw.TABLE_NAME,
     awsRegion: raw.AWS_REGION,
     dynamodbEndpoint: raw.DYNAMODB_ENDPOINT,
