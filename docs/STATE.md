@@ -11,24 +11,28 @@ description: Between-session work-state tracking the current active feature, rec
 > Structural decision → ADR; work state → here. Update when **pausing/ending**; read when
 > **resuming**. Use the `handoff` skill. Injected into context at the start of each session.
 
-**Last updated:** 2026-09-05 by Codex (GPT-5)
+**Last updated:** 2026-09-05
 
 ## In progress / next step
 
 - Active feature: `specs/002-request-throttling/`; `.specify/state` points to it. Branch:
-  `002-request-throttling`.
-- Implementation is complete through Task 9. `tasks.md` is fully checked, `contract.md` is stamped
-  PASS for every AC and the full-suite check, and `review-and-simplify` found no blocking issues.
-- Next concrete step: inspect the final diff and decide whether to commit. Do not commit without
-  explicit approval.
+  `002-request-throttling`, two commits ahead of `main`.
+- Implementation is complete and committed as `3b32a84`. `tasks.md` is fully checked, `contract.md`
+  is stamped PASS for every AC and the full-suite check, and `review-and-simplify` found no
+  blocking issues. Re-verified on 2026-09-05: 248 unit, 13 integration, 43 e2e, gates green.
+- Next concrete step: merge the branch into `main` locally, re-run gates on the result, then run
+  `learn-session`.
 
 ## Recent decisions
 
+- The feature's three durable decisions are now ADRs rather than STATE entries:
+  [ADR-0002](architecture/adr/0002-approximate-sliding-window-counter-in-dynamodb.md) (the
+  saturated sliding-window counter), [ADR-0003](architecture/adr/0003-fail-open-when-the-throttling-path-fails.md)
+  (the fail-open posture), and [ADR-0004](architecture/adr/0004-problem-mapping-rows-contributed-per-context.md)
+  (problem rows contributed per context, assembled at `AppModule`).
 - The Codex view was regenerated with `~/workspace/keel/bootstrap.sh --force --agent=codex`.
   Bootstrap changed `AGENTS.md`, `.agents/`, `.specify/clients.json`, `.specify/keel.json`, and
   moved the tests block in `CLAUDE.md`.
-- `ProblemDetailsFilter` and `PROBLEM_MAPPINGS` are now wired at `AppModule`, where auth and
-  throttling mappings can be assembled without a bounded-context dependency cycle.
 - `ThrottlingModule` provides the Dynamo-backed store, local fallback limiter, use case, global
   IP guard, and account interceptor.
 - DynamoDB local was used for integration/e2e and was left running.
@@ -54,5 +58,4 @@ description: Between-session work-state tracking the current active feature, rec
 
 ## Deferred ideas / todos
 
-- Keep `CODEX_HANDOFF.md` temporary and untracked; it can be removed after its contents are no
-  longer needed.
+- Nothing outstanding for 002. The temporary `CODEX_HANDOFF.md` has been removed.
