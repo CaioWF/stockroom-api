@@ -42,8 +42,10 @@ was never stopped). Stop whatever holds the port, or run `docker compose down` f
 cp .env.example .env
 ```
 
-Then fill in every value `.env.example` lists — none of them are real secrets, they are just
-names. `specs/001-authentication/contract.md`'s Environment section explains what each one is for.
+The copy arrives filled with working local defaults — none of them are real secrets. Only the
+optional variables are left blank, and blank means "use the default declared in
+`src/shared/config/environment.schema.ts`". `specs/001-authentication/contract.md`'s Environment
+section explains what each one is for.
 
 **`.env` is not loaded automatically.** This project parses configuration straight from
 `process.env` (`src/shared/config/environment.schema.ts` → `configuration.module.ts`) — there is
