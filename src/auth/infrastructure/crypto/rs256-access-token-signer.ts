@@ -11,7 +11,7 @@
  * elapsed time.
  */
 
-import type { CryptoKey } from 'jose';
+import type { KeyLike } from 'jose';
 import { importPKCS8, SignJWT } from 'jose';
 
 import {
@@ -30,7 +30,7 @@ export class Rs256AccessTokenSigner implements AccessTokenSigner {
   // lifetime — caching the imported CryptoKey the same way (a memoized
   // promise, assigned before any await) avoids redoing jose's PEM->CryptoKey
   // import on every sign() call.
-  private cachedKey: Promise<CryptoKey> | undefined;
+  private cachedKey: Promise<KeyLike> | undefined;
 
   constructor(
     private readonly signingKeyProvider: SigningKeyProvider,
@@ -59,7 +59,7 @@ export class Rs256AccessTokenSigner implements AccessTokenSigner {
     return Math.floor(date.getTime() / MILLISECONDS_PER_SECOND);
   }
 
-  private importSigningKey(privateKey: string): Promise<CryptoKey> {
+  private importSigningKey(privateKey: string): Promise<KeyLike> {
     this.cachedKey ??= importPKCS8(privateKey, JWT_ALGORITHM);
     return this.cachedKey;
   }

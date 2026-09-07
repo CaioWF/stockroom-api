@@ -30,7 +30,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import type { CryptoKey } from 'jose';
+import type { KeyLike } from 'jose';
 import { importSPKI, jwtVerify, JWTVerifyGetKey } from 'jose';
 
 import type { AppConfig } from '../../shared/config/environment.schema';
@@ -59,7 +59,7 @@ export class JwtAuthGuard implements CanActivate {
   // trusted keys mid-rotation (the port's own JSDoc), and this guard is a
   // long-lived singleton, so caching by kid avoids redoing jose's
   // PEM->CryptoKey import on every guarded request for each trusted key.
-  private readonly verificationKeyCache = new Map<string, Promise<CryptoKey>>();
+  private readonly verificationKeyCache = new Map<string, Promise<KeyLike>>();
 
   constructor(
     private readonly reflector: Reflector,
@@ -125,7 +125,7 @@ export class JwtAuthGuard implements CanActivate {
     };
   }
 
-  private importVerificationKey(key: VerificationKey): Promise<CryptoKey> {
+  private importVerificationKey(key: VerificationKey): Promise<KeyLike> {
     const cached = this.verificationKeyCache.get(key.kid);
     if (cached !== undefined) {
       return cached;
