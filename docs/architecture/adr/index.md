@@ -6,3 +6,4 @@
 * [OpenAPI paths contributed per context](0005-openapi-paths-contributed-per-context.md) - Each bounded context owns its OpenAPI path rows and the composition root assembles them into the published document.
 * [Accept email enumeration at registration](0006-accept-email-enumeration-at-registration.md) - Registration keeps answering 409 on a duplicate address, and the leak is accepted rather than mitigated, because every available mitigation either relocates the oracle or requires a mail path the product does not have.
 * [One shared catalog partition](0007-one-shared-catalog-partition.md) - The catalog is a single shared collection under a fixed partition key, and an account authenticates a caller without owning or partitioning any product.
+* [ALB Lambda transport](0008-alb-lambda-transport.md) - Stockroom reaches Lambda through an Application Load Balancer, accepting the idle cost to avoid changing the application event contract.

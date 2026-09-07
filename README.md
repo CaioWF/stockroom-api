@@ -189,3 +189,173 @@ laptop.
   the AWS SDK's.
 - **`test:e2e` fails once with a `TimeToLive is already enabled` error on a brand-new table** —
   see step 6's note; rerun the command.
+
+## AWS deployment runbook
+
+These commands create the AWS infrastructure declared in `terraform/`, write the real RS256 key
+material, exercise the deployed endpoint, redeploy code, and tear the stack down. They need real
+AWS credentials and a `terraform` binary; the repository's own `npm run infra:check` needs neither
+and never applies anything.
+
+**Read this before applying.** Without `certificate_arn` the stack serves `POST /auth/login`,
+`POST /auth/refresh` and `GET /.well-known/jwks.json` over **plaintext HTTP** — passwords and
+refresh tokens travel in the clear, and the JWKS document is substitutable in transit. That default
+exists so the repository is complete without a domain. Anything beyond a throwaway stack should set
+`certificate_arn`. The reasoning is in
+[ADR-0008](docs/architecture/adr/0008-alb-lambda-transport.md).
+
+### 1. Build the deployment artifact
+
+`nest build` transpiles and bundles nothing, so the archive needs production dependencies too.
+`@node-rs/argon2` ships a platform-specific native binary and the function pins `x86_64`, so the
+install has to resolve the linux-x64 build even when you are on macOS or arm64.
+
+```sh
+rm -f lambda.zip          # zip appends; a stale archive would keep old entries
+npm ci
+npm run build
+npm ci --omit=dev --cpu=x64 --os=linux
+(cd dist && zip -qr ../lambda.zip .)
+zip -qr lambda.zip node_modules
+```
+
+The archive lands at the repository root, not in `dist/`, because `nest-cli.json` sets
+`deleteOutDir` and the next build would delete it. `terraform.tfvars.example` points
+`lambda_package_path` at `../lambda.zip` to match.
+
+The archive root then holds `src/lambda.js` and `node_modules/`, which is why the function's
+handler is `src/lambda.handler`: `tsconfig.build.json` excludes only `test`, so `scripts/` is
+compiled too and the emitted tree is `dist/src/...`, not `dist/...`.
+
+### 2. Choose your variables
+
+```sh
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+```
+
+Edit it. `lambda_package_path` has no default and must point at the zip from step 1. Uncomment
+`certificate_arn` unless you accept the plaintext default described above. `jwt_issuer` is baked
+into every access token and checked by `JwtAuthGuard`, so changing it later invalidates every
+outstanding token — pick it once.
+
+`terraform.tfvars` is gitignored. Do not commit it.
+
+### 3. Initialize against the state bucket
+
+The bucket is a prerequisite Terraform cannot create for itself, since it holds Terraform's own
+state.
+
+```sh
+terraform -chdir=terraform init \
+  -backend-config="bucket=<state-bucket>" \
+  -backend-config="key=stockroom/terraform.tfstate" \
+  -backend-config="region=us-east-1" \
+  -backend-config="encrypt=true" \
+  -backend-config="use_lockfile=true"
+```
+
+### 4. Review and apply
+
+```sh
+terraform -chdir=terraform plan -var-file=terraform.tfvars
+terraform -chdir=terraform apply -var-file=terraform.tfvars
+```
+
+### 5. Write the real key material
+
+Terraform creates the two SSM parameters with inert placeholders and never learns their real
+contents — that is what keeps the private key out of the state file. **Generate a key pair for this
+deployment; do not reuse `keys/private.pem`,** which `npm run keys:generate` writes for local
+development and which sits unencrypted in every developer's working tree.
+
+```sh
+mkdir -p .deploy-keys && chmod 700 .deploy-keys
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out .deploy-keys/private.pem
+openssl rsa -in .deploy-keys/private.pem -pubout -out .deploy-keys/public.pem
+```
+
+The verification parameter takes a **JSON array of SPKI PEM strings**, not a bare PEM.
+`parsePublicKeyPems` runs `JSON.parse`, rejects anything that is not an array, then rejects any
+element that is not a string — hand it a bare PEM and every token verification fails. Build the
+array with the Node you already have; this repository cannot produce the artifact without it, so
+it is a safer assumption than `jq`:
+
+```sh
+node -e 'const fs=require("fs"); const dir=".deploy-keys";
+  fs.writeFileSync(dir + "/verification-keys.json",
+    JSON.stringify([fs.readFileSync(dir + "/public.pem", "utf8")]))'
+```
+
+Write both, reading the parameter names from the stack rather than re-deriving them:
+
+```sh
+aws ssm put-parameter --overwrite --type SecureString \
+  --name "$(terraform -chdir=terraform output -raw signing_key_parameter_name)" \
+  --value "file://.deploy-keys/private.pem"
+aws ssm put-parameter --overwrite --type SecureString \
+  --name "$(terraform -chdir=terraform output -raw verification_keys_parameter_name)" \
+  --value "file://.deploy-keys/verification-keys.json"
+```
+
+Then move `.deploy-keys/private.pem` somewhere it belongs — a password manager, or a KMS-encrypted
+bucket — and delete the local copy. It is the production signing key.
+
+### 6. Exercise the endpoint
+
+```sh
+curl -fsS "http://$(terraform -chdir=terraform output -raw load_balancer_dns_name)/health"
+```
+
+Use `https://` instead if you supplied a certificate.
+
+### 7. Redeploy application code
+
+Terraform does not own the code-deploy loop: the function declares no `source_code_hash`, so a
+rebuilt zip at the same path produces "No changes" while the deployed code goes stale. Publish code
+directly instead, and never with `apply -replace` — replacing the function invalidates the ALB
+permission and the target-group registration, and opens a 502 window.
+
+```sh
+aws lambda update-function-code \
+  --function-name "$(terraform -chdir=terraform output -raw function_name)" \
+  --zip-file fileb://lambda.zip
+```
+
+### 8. Tear the stack down
+
+**This deletes the DynamoDB table and everything in it: every account, refresh token and throttle
+counter. There is no backup step in this runbook.** The table deliberately carries no deletion
+protection, because teardown is a documented goal of this stack; point-in-time recovery is enabled,
+but a deleted table takes its PITR window with it.
+
+The two SSM parameters carry `prevent_destroy`, so teardown refuses to run until they are released.
+That guard exists because recreating a parameter overwrites your real signing key with the
+placeholder, silently. Release them deliberately, tear the stack down, then remove them by hand:
+
+```sh
+terraform -chdir=terraform state rm aws_ssm_parameter.signing_key
+terraform -chdir=terraform state rm aws_ssm_parameter.verification_keys
+terraform -chdir=terraform apply -destroy -var-file=terraform.tfvars
+aws ssm delete-parameter --name "/<project_name>/jwt/signing-key"
+aws ssm delete-parameter --name "/<project_name>/jwt/verification-keys"
+```
+
+### Recovering from a lost or mismatched state file
+
+Every resource name is a fixed string, so applying against an empty state fails with "already
+exists" rather than adopting what is already there. Do **not** delete the live resources to get
+past it — that destroys the table. Import them instead:
+
+```sh
+terraform -chdir=terraform import -var-file=terraform.tfvars \
+  aws_dynamodb_table.stockroom "<project_name>-table"
+```
+
+Repeat for each resource the plan reports as new, then re-run `plan` until it comes back empty.
+
+**Do not import the two SSM parameters.** Importing records no `value_wo_version` in state, while
+`data.tf` declares `value_wo_version = 1`, so the next apply sees a version change and writes the
+placeholder over your real signing key. `prevent_destroy` does not stop this: it guards destroy
+and replacement, not an in-place update. Leave the parameters out of state — the running function
+reads them from SSM directly and never consults Terraform — and if you have already imported one,
+re-run step 5 to rewrite the real key material **before** the next apply.

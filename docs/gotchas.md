@@ -19,6 +19,20 @@ cutting off the actual pass/fail summary without any visible truncation marker b
 `[full output: ...]` line. Fix: use `rtk proxy <cmd>` to bypass filtering when you need the real
 tail of a long-running command's output (e.g. a full e2e run).
 
+## rtk truncation can be written INTO a file, silently destroying content
+
+Symptom: rebuilding a file with a shell pipeline — `head -192 README.md > new && cat frag >> new
+&& mv new README.md` — produced a README missing 161 lines, with the literal string
+`[161 more lines]` sitting where the content had been. Cause: the `rtk` proxy filters command
+stdout, and redirecting that stdout into a file captures the *filtered* text, truncation marker
+included. The two entries below describe rtk misleading a reader; this one has it corrupting the
+artifact, which no amount of careful reading catches afterwards.
+
+Fix: never build or rewrite a file by redirecting a filtered command's output. Do file surgery
+with the Write/Edit tools, or with a `python3 -` heredoc that opens and writes the file directly —
+neither passes through the proxy. Detect a past occurrence with
+`grep -rn "more lines\]" <path>`.
+
 ## rtk rewrites git output, not only truncates it
 
 Symptom: `git log --graph --oneline` through the `rtk` proxy printed a linear history with the

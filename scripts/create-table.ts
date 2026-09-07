@@ -42,6 +42,14 @@
  * definition is `specs/004-cloud-infrastructure`'s separate obligation.
  */
 
+// The deployed table is ALSO declared in `terraform/data.tf`, and nothing
+// mechanically keeps the two in sync — `npm run infra:check` only plans the
+// Terraform, it never diffs it against this file. Changing a key, a type or
+// the TTL attribute here means changing it there too, or local and deployed
+// environments silently disagree. One deliberate difference: the Terraform
+// table enables point-in-time recovery and this script does not, since local
+// and CI tables are disposable.
+
 import {
   CreateTableCommand,
   DescribeTimeToLiveCommand,

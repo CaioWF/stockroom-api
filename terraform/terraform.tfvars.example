@@ -1,0 +1,17 @@
+region             = "us-east-1"
+availability_zones = ["us-east-1a", "us-east-1b"]
+project_name       = "stockroom"
+
+# The issuer is baked into every access token and checked by JwtAuthGuard.
+# Changing it later invalidates every outstanding token, so pick it once.
+jwt_issuer   = "https://stockroom.example"
+jwt_audience = "stockroom-api"
+
+# Built outside Terraform; see the deploy runbook in README.md.
+lambda_package_path = "../lambda.zip"
+
+# WITHOUT a certificate the stack serves /auth/login, /auth/refresh and the
+# JWKS document over PLAINTEXT HTTP. Acceptable only for a throwaway stack.
+# Uncomment with a real ACM certificate ARN to get an HTTPS listener on 443
+# and a redirect from 80.
+# certificate_arn = "arn:aws:acm:us-east-1:<account-id>:certificate/<uuid>"

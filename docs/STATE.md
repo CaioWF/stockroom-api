@@ -11,61 +11,80 @@ description: Between-session work-state tracking the current active feature, rec
 > Structural decision → ADR; work state → here. Update when **pausing/ending**; read when
 > **resuming**. Use the `handoff` skill. Injected into context at the start of each session.
 
-**Last updated:** 2026-09-06
+**Last updated:** 2026-09-06 by caiowf
 
 ## In progress / next step
 
-- Nothing in flight. Features 001, 002 and 003 are implemented, verified and committed on `main`.
-  `003-catalog-listing` sits in the commit at the tip of `main`, 62 files, and closed the SDD cycle
-  through `review-and-simplify` and `learn-session`.
-- `.specify/state` still names `003-catalog-listing`. `prd-writer` repoints it when the next
-  feature starts; do not edit it by hand.
-- Next concrete step: pick feature 004 and enter the chain at `brainstorming`. No candidate has
-  been chosen — the product brief's remaining jobs-to-be-done are the place to look, and the write
-  path for products is the obvious successor, since 003's spec fixes the record shape a writer must
-  honor (`specs/003-catalog-listing/spec.md`, FR5b and the Out of Scope list).
+- **Feature 005 `terraform-aws-infrastructure` is finished and fully verified, but deliberately
+  NOT committed.** It exists only in the working tree. `spec.md` and `plan.md` carry
+  `status: approved`, all 10 tasks are checked, and every one of the 20 acceptance criteria is
+  stamped `PASS` in `specs/005-terraform-aws-infrastructure/contract.md`.
+- **Next concrete step, and the only thing gating this feature:** run the deploy runbook in
+  `README.md` against a real AWS account — build the artifact, apply, write the key material, curl
+  the endpoint. If it works, commit feature 005 and push it. If it cannot be validated, the
+  decision already taken is to drop it rather than publish unproven infrastructure.
+- Everything else is done: `npm run infra:check` exits 0 with no AWS credentials and plans 20
+  resources; `.specify/gates/run-gates.sh` is green; the three suites pass unchanged (290 unit,
+  16 integration, 58 e2e), which is the evidence the feature touched no application code.
 
 ## Recent decisions
 
-- Git history was rewritten to strip the `Claude-Session:` trailer from all 5 commits that carried
-  it (`git filter-branch --msg-filter`, 15 commits rewritten). `Co-Authored-By:` was kept. Content
-  is byte-identical — `git diff` against the pre-rewrite tip is empty. The trailer must not be
-  written again. There is no remote, so nothing needed force-pushing.
-- 003's three durable decisions are ADRs, not STATE entries:
-  [ADR-0002](architecture/adr/0002-approximate-sliding-window-counter-in-dynamodb.md),
-  [ADR-0003](architecture/adr/0003-fail-open-when-the-throttling-path-fails.md),
-  [ADR-0004](architecture/adr/0004-problem-mapping-rows-contributed-per-context.md), plus
-  [ADR-0005](architecture/adr/0005-openapi-paths-contributed-per-context.md) (each bounded context
-  owns its OpenAPI path rows; `AppModule` assembles them).
-- `learn-session` routed this session's durable facts into `CLAUDE.md`'s `keel:tests` block and
-  `docs/gotchas.md`. They are not repeated here.
+- **`main` was published to a new public repository**, `https://github.com/CaioWF/stockroom-api`.
+  20 commits, 434 files, HEAD `bbeca6f`. `origin` is configured with upstream tracking. History was
+  scanned for secrets before pushing and is clean — the only `BEGIN PRIVATE KEY` hit is
+  `test/unit/auth/infrastructure/keys/file-system-key-providers.spec.ts:13`, which generates a pair
+  at runtime with `generateKeyPairSync`.
+- **The agent tooling (`.claude/`, `.agents/`, `CLAUDE.md`, `AGENTS.md`) went public deliberately**,
+  as evidence of process for the challenge's "structured AI use" criterion.
+- **Feature 005 was held back from that push** and left uncommitted, at the user's instruction.
+- **Amazon Cognito was considered and rejected** as a replacement for the project's own
+  authentication. Recorded in ADR-0008 (uncommitted): it would delete feature 001, gut 002's
+  credential-route throttling, moot ADR-0006, and end the suite's ability to run offline.
+- **ALB over API Gateway / Function URL**, with its idle cost accepted — ADR-0008, which is the ADR
+  the constitution's "Idle costs nothing" principle had been owed since feature 001.
+- **SSM parameters use write-only arguments and `prevent_destroy`.** Two separate hazards, found by
+  two independent review passes: a plain `value` leaks the RS256 private key into state on refresh,
+  and recreation overwrites the operator's real key with the placeholder. Spec FR18 and FR18a.
+- **The `SPEC_DEVIATION` in `scripts/infra-check.sh` was closed by amending the spec, not the code.**
+  Codex was right that `init -backend=false` cannot work alongside a declared backend; FR22 and FR23
+  were internally inconsistent and now carry FR23a. No open `SPEC_DEVIATION` remains in this feature.
 
 ## Blockers
 
-- None. All three suites and the gates were re-run from a cold start and are green: 275 unit,
-  16 integration, 59 e2e, `bash .specify/gates/run-gates.sh` all gates passed.
-- Three open `SPEC_DEVIATION` comments remain, expected and counted by the fidelity gate:
-  `src/shared/config/environment.schema.ts` (bootstrap-time config validation),
-  `src/throttling/infrastructure/dynamo/throttle-counter.repository.ts` (rollover transition),
-  `src/throttling/presentation/client-address.policy.ts` (FR5a's pure-function bootstrap).
+- **No AWS account.** Feature 005 has never been applied and cannot be here. Every acceptance
+  criterion is proven against `fmt`/`validate`/`plan`; nothing proves the stack works in AWS. The
+  runbook is documentation, not a verified procedure. This is the blocker that decides whether 005
+  ships at all.
+- **Feature 005's work is unversioned and one careless command from gone.** Six *tracked* files are
+  modified with no copy anywhere: `README.md`, `package.json`, `.gitignore`, `docs/STATE.md`,
+  `docs/index.md`, `docs/architecture/adr/index.md`. A `git checkout .` or `git clean -fd` destroys
+  those along with the untracked `terraform/`, `scripts/infra-check.sh`,
+  `docs/architecture/adr/0008-alb-lambda-transport.md`, and
+  `specs/005-terraform-aws-infrastructure/`. `git stash -u -m "005 infra"` is the cheap insurance
+  if the pause runs long.
+- `CODEX_HANDOFF_INFRA.md` and `CODEX_HANDOFF_FRONTEND.md` **no longer exist on disk.** Both were
+  present during the session that wrote this file — the infra one was authored in it — and both
+  were gone by the end, removed by something outside this session's commands. Neither was ever
+  committed, so there is no copy to restore from; the infra handoff can be regenerated from
+  `specs/005-terraform-aws-infrastructure/` if it is wanted. `example-requests.http` (0 bytes)
+  survived in the same directory.
+- `.deploy-keys/` may still sit at the repository root holding one empty file — a leftover from
+  verifying a `.gitignore` rule, which the destructive-command guard would not let me remove. It is
+  gitignored and harmless; delete it by hand if it bothers you.
 
 ## Deferred ideas / todos
 
-- Five minor findings from the 003 review, none behavior-affecting, none blocking. Reconsider when
-  next editing the catalog context:
-  - `src/catalog/infrastructure/dynamo/catalog-query-failed.error.ts` — `causeName` is write-only:
-    set, never read, and `logFailure` omits it, so a production query failure logs
-    `catalog_query_failed` with no cause. Either log it or drop the field. Highest value of the five.
-  - `src/catalog/presentation/catalog-problem-mappings.ts` — the `MalformedProductItemError` row is
-    unreachable: `readItems` runs inside the repository's `try`, so the catch-all rewraps it as
-    `CatalogQueryFailedError`. Both map to 503, so removing the row changes nothing observable.
-  - `src/auth/presentation/openapi/problem-schema.ts` — a re-export with zero importers. Dead file.
-  - `src/auth/presentation/openapi/extend-zod.ts` — a one-line shim; `request-schemas.ts` and
-    `response-schemas.ts` could import the shared module directly.
-  - `src/catalog/infrastructure/dynamo/product.repository.ts` — `buildProductKey(accountId, '').PK`
-    builds a whole key to discard the sort key. A partition-key helper would read better.
-- `refs/original/refs/heads/main` holds the pre-rewrite history as a backup. Drop it once the
-  rewrite is trusted: `git update-ref -d refs/original/refs/heads/main && git reflog expire
-  --expire=now --all && git gc --prune=now`.
-- Local DynamoDB was left running. It uses `-inMemory`, so a container restart wipes the table and
-  the start command's `npm run db:create-table` has to run again.
+- **Automated assertions over `terraform show -json`.** Rejected during `clarify` in favour of a
+  human reading the plan and stamping `contract.md`. The consequence is written into the spec: AC-3
+  through AC-15 are point-in-time verdicts, not regression tests, so an edit that removes the health
+  check or widens the IAM policy is caught by review or not at all. Reconsider once the stack is
+  applied for real and starts changing.
+- **`npm run infra:check` is deliberately not a pre-commit gate** (FR25), because `terraform init`
+  needs network access and would block every commit in the repository. Revisit if the provider cache
+  proves reliable enough offline.
+- **CI/CD, multi-environment, custom domain and DNS, WAF, alarms and dashboards** are all explicit
+  `Out of Scope` in feature 005's spec. Each is a candidate feature; none is started.
+- **Bootstrapping the remote state bucket** stays a documented prerequisite the stack cannot create
+  for itself.
+- **Front-end** — `CODEX_HANDOFF_FRONTEND.md` briefs a React/Vite client in a separate repository.
+  Not started, and the challenge lists it as a plus rather than a requirement.
