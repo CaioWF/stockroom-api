@@ -177,6 +177,19 @@ routes need real AWS SSM access.** This is expected for a Lambda-behind-Paramete
 design (`src/lambda.ts`), where the real target for a login flow is a deployed environment, not a
 laptop.
 
+## 8. Browse or exercise the API
+
+```sh
+bash scripts/swagger-ui.sh
+```
+
+Serves the running app's OpenAPI document in a local Swagger UI at `http://localhost:8080`,
+reverse-proxied so `Authorize` and try-it-out calls hit the real routes without a CORS error.
+Restart the script after changing a route or a schema — the spec is a snapshot taken at startup.
+
+`example-requests.http` has the same three routes (register, login, list products) chained with
+REST Client's request-variable syntax, for editors that support running `.http` files directly.
+
 ## Troubleshooting
 
 - **`docker compose up -d` fails with "port is already allocated"** — see step 2.

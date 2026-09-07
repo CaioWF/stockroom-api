@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:3000
+
+### Register a new account
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test-user@example.com",
+  "password": "correct horse battery staple"
+}
+
+### Log in (returns accessToken + refreshToken)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test-user@example.com",
+  "password": "correct horse battery staple"
+}
+
+### List products (paginated, needs the accessToken from login above)
+GET {{baseUrl}}/products?limit=20
+Authorization: Bearer {{login.response.body.accessToken}}
